@@ -1,0 +1,27 @@
+# Common files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Editor directories
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Testing
+test/
+*.test.zsh
+
+# Build artifacts
+dist/
+build/
+
+# Local configuration (user-specific)
+.local/
+*.local

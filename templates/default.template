@@ -1,0 +1,45 @@
+# Project template configuration
+# Created: {date}
+
+# Application Configuration
+# export APP_NAME={project_name}
+# export APP_ENV=development
+
+# Flask Configuration
+# export FLASK_APP='{project_name}.app:create_app()'
+# export FLASK_ENV=development
+# export FLASK_DEBUG=1
+
+# Django Configuration
+# export DJANGO_SETTINGS_MODULE={project_name}.settings
+# export DJANGO_DEBUG=True
+
+# Database Configuration
+# export DB_HOST=127.0.0.1
+# export DB_PORT=5432
+# export DB_USER={project_name}
+# export DB_PASSWORD=your_password_here
+# export DB_NAME={project_name}_dev
+# export DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME
+
+# Redis Configuration
+# export REDIS_URL=redis://127.0.0.1:6379/0
+# export REDIS_HOST=127.0.0.1
+# export REDIS_PORT=6379
+
+# AWS Configuration
+# export AWS_REGION=us-east-1
+# export AWS_DEFAULT_REGION=us-east-1
+# export AWS_PROFILE=default
+
+# API Configuration
+# export API_BASE_URL=http://localhost:8000
+# export API_KEY=your_api_key_here
+# export API_TIMEOUT=30
+
+# Feature Flags
+# export DEBUG=true
+# export ENABLE_LOGGING=true
+# export LOG_LEVEL=INFO
+
+# Add your custom environment variables below:

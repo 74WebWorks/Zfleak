@@ -1,0 +1,393 @@
+#!/usr/bin/env zsh
+
+# ============================================================================
+# zfleak - Project Environment Manager
+# ============================================================================
+# A CLI tool to manage project-specific environment configurations
+# ============================================================================
+
+set -e
+
+VERSION="1.0.0"
+CONFIG_DIR="${ZFLEAK_CONFIG_DIR:-$HOME/.zfleak.d}"
+ARCHIVE_DIR="$CONFIG_DIR/.archive"
+PROJECTS_CONFIG="$CONFIG_DIR/projects.conf"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+print_header() {
+    echo "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
+    echo "${BLUE}║${NC}  ${CYAN}zfleak${NC} - Project Environment Manager v${VERSION}      ${BLUE}║${NC}"
+    echo "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+}
+
+print_success() {
+    echo "${GREEN}✓${NC} $1"
+}
+
+print_error() {
+    echo "${RED}✗${NC} $1" >&2
+}
+
+print_warning() {
+    echo "${YELLOW}⚠${NC} $1"
+}
+
+print_info() {
+    echo "${CYAN}ℹ${NC} $1"
+}
+
+# ============================================================================
+# Command: new-project
+# ============================================================================
+cmd_new_project() {
+    local project_name=$1
+    local project_path=$2
+    
+    if [[ -z "$project_name" ]]; then
+        print_error "Project name is required"
+        echo "Usage: zfleak new-project <name> [path]"
+        return 1
+    fi
+    
+    local config_file="$CONFIG_DIR/${project_name}.zsh"
+    
+    if [[ -f "$config_file" ]]; then
+        print_error "Project '$project_name' already exists"
+        print_info "Edit: $config_file"
+        return 1
+    fi
+    
+    # Create project config from template
+    cat > "$config_file" << EOF
+# ============================================================================
+# ${project_name} - Development Environment
+# ============================================================================
+# Created: $(date +"%Y-%m-%d")
+# ============================================================================
+
+# Flask/Django Configuration (uncomment if needed)
+# export FLASK_APP='${project_name}.app:create_app()'
+# export FLASK_ENV=development
+
+# Database Configuration
+# export DB_HOST=127.0.0.1
+# export DB_PORT=5432
+# export DB_USER=${project_name}
+# export DB_PASSWORD=your_password
+# export DB_NAME=${project_name}_dev
+
+# AWS Configuration (uncomment if needed)
+# export AWS_REGION=us-east-1
+# export AWS_DEFAULT_REGION=us-east-1
+
+# API URLs (uncomment if needed)
+# export API_BASE_URL=http://localhost:8000
+
+# Add your project-specific environment variables below:
+EOF
+    
+    # Register project path if provided
+    if [[ -n "$project_path" ]]; then
+        register_project_path "$project_name" "$project_path"
+    fi
+    
+    print_success "Created project: $project_name"
+    print_info "Config file: $config_file"
+    
+    if [[ -n "$project_path" ]]; then
+        print_success "Registered path: $project_path"
+        print_info "Auto-detection will activate when you cd into this path"
+    else
+        print_warning "No path registered. Add manually or use: zfleak register-path $project_name <path>"
+    fi
+    
+    echo ""
+    print_info "Edit the config file to add your environment variables"
+    echo "Then run: ${GREEN}use-project $project_name${NC}"
+}
+
+# ============================================================================
+# Command: register-path
+# ============================================================================
+register_project_path() {
+    local project_name=$1
+    local project_path=$2
+    
+    # Create projects.conf if it doesn't exist
+    touch "$PROJECTS_CONFIG"
+    
+    # Remove existing entry for this project
+    sed -i.bak "/^${project_name}:/d" "$PROJECTS_CONFIG" 2>/dev/null || true
+    rm -f "${PROJECTS_CONFIG}.bak"
+    
+    # Add new entry
+    echo "${project_name}:${project_path}" >> "$PROJECTS_CONFIG"
+}
+
+cmd_register_path() {
+    local project_name=$1
+    local project_path=$2
+    
+    if [[ -z "$project_name" ]] || [[ -z "$project_path" ]]; then
+        print_error "Both project name and path are required"
+        echo "Usage: zfleak register-path <project-name> <path>"
+        return 1
+    fi
+    
+    local config_file="$CONFIG_DIR/${project_name}.zsh"
+    if [[ ! -f "$config_file" ]]; then
+        print_error "Project '$project_name' does not exist"
+        print_info "Create it first: zfleak new-project $project_name"
+        return 1
+    fi
+    
+    register_project_path "$project_name" "$project_path"
+    
+    print_success "Registered path for project: $project_name"
+    print_info "Path: $project_path"
+    print_info "Auto-detection is now enabled for this project"
+}
+
+# ============================================================================
+# Command: list-projects
+# ============================================================================
+cmd_list_projects() {
+    echo "${CYAN}Active Projects:${NC}"
+    echo ""
+    
+    if ls "$CONFIG_DIR"/*.zsh &>/dev/null; then
+        for file in "$CONFIG_DIR"/*.zsh; do
+            [[ "$file" == *"switcher.zsh" ]] && continue
+            [[ "$file" == *"common.zsh" ]] && continue
+            
+            local name=$(basename "$file" .zsh)
+            local path=$(grep "^${name}:" "$PROJECTS_CONFIG" 2>/dev/null | cut -d: -f2-)
+            
+            if [[ -n "$path" ]]; then
+                echo "  ${GREEN}•${NC} ${CYAN}${name}${NC} → ${path}"
+            else
+                echo "  ${YELLOW}•${NC} ${CYAN}${name}${NC} (no auto-detection path)"
+            fi
+        done
+    else
+        print_info "No active projects yet"
+    fi
+    
+    echo ""
+    echo "${CYAN}Archived Projects:${NC}"
+    echo ""
+    
+    if ls "$ARCHIVE_DIR"/*.zsh &>/dev/null; then
+        for file in "$ARCHIVE_DIR"/*.zsh; do
+            local name=$(basename "$file" .zsh)
+            echo "  ${YELLOW}•${NC} ${name}"
+        done
+    else
+        print_info "No archived projects"
+    fi
+}
+
+# ============================================================================
+# Command: archive
+# ============================================================================
+cmd_archive() {
+    local project_name=$1
+    
+    if [[ -z "$project_name" ]]; then
+        print_error "Project name is required"
+        echo "Usage: zfleak archive <project-name>"
+        return 1
+    fi
+    
+    local config_file="$CONFIG_DIR/${project_name}.zsh"
+    
+    if [[ ! -f "$config_file" ]]; then
+        print_error "Project '$project_name' not found"
+        return 1
+    fi
+    
+    # Move to archive
+    mkdir -p "$ARCHIVE_DIR"
+    mv "$config_file" "$ARCHIVE_DIR/"
+    
+    # Remove from projects.conf
+    sed -i.bak "/^${project_name}:/d" "$PROJECTS_CONFIG" 2>/dev/null || true
+    rm -f "${PROJECTS_CONFIG}.bak"
+    
+    print_success "Archived project: $project_name"
+    print_info "Moved to: $ARCHIVE_DIR/${project_name}.zsh"
+}
+
+# ============================================================================
+# Command: restore
+# ============================================================================
+cmd_restore() {
+    local project_name=$1
+    
+    if [[ -z "$project_name" ]]; then
+        print_error "Project name is required"
+        echo "Usage: zfleak restore <project-name>"
+        return 1
+    fi
+    
+    local archive_file="$ARCHIVE_DIR/${project_name}.zsh"
+    
+    if [[ ! -f "$archive_file" ]]; then
+        print_error "Archived project '$project_name' not found"
+        return 1
+    fi
+    
+    # Move back to active
+    mv "$archive_file" "$CONFIG_DIR/"
+    
+    print_success "Restored project: $project_name"
+    print_info "Config file: $CONFIG_DIR/${project_name}.zsh"
+    print_warning "Remember to register the project path if needed"
+}
+
+# ============================================================================
+# Command: edit
+# ============================================================================
+cmd_edit() {
+    local project_name=$1
+    
+    if [[ -z "$project_name" ]]; then
+        print_error "Project name is required"
+        echo "Usage: zfleak edit <project-name>"
+        return 1
+    fi
+    
+    local config_file="$CONFIG_DIR/${project_name}.zsh"
+    
+    if [[ ! -f "$config_file" ]]; then
+        config_file="$ARCHIVE_DIR/${project_name}.zsh"
+        if [[ ! -f "$config_file" ]]; then
+            print_error "Project '$project_name' not found"
+            return 1
+        fi
+    fi
+    
+    ${EDITOR:-code} "$config_file"
+}
+
+# ============================================================================
+# Command: show
+# ============================================================================
+cmd_show() {
+    local project_name=$1
+    
+    if [[ -z "$project_name" ]]; then
+        print_error "Project name is required"
+        echo "Usage: zfleak show <project-name>"
+        return 1
+    fi
+    
+    local config_file="$CONFIG_DIR/${project_name}.zsh"
+    
+    if [[ ! -f "$config_file" ]]; then
+        config_file="$ARCHIVE_DIR/${project_name}.zsh"
+        if [[ ! -f "$config_file" ]]; then
+            print_error "Project '$project_name' not found"
+            return 1
+        fi
+    fi
+    
+    echo "${CYAN}Configuration for: ${project_name}${NC}"
+    echo "${CYAN}File: ${config_file}${NC}"
+    echo ""
+    cat "$config_file"
+}
+
+# ============================================================================
+# Command: help
+# ============================================================================
+cmd_help() {
+    print_header
+    echo "Usage: ${CYAN}zfleak${NC} <command> [options]"
+    echo ""
+    echo "${YELLOW}Commands:${NC}"
+    echo ""
+    echo "  ${GREEN}new-project${NC} <name> [path]     Create a new project configuration"
+    echo "  ${GREEN}register-path${NC} <name> <path>   Register auto-detection path for a project"
+    echo "  ${GREEN}list${NC}                          List all projects"
+    echo "  ${GREEN}edit${NC} <name>                   Edit project configuration"
+    echo "  ${GREEN}show${NC} <name>                   Display project configuration"
+    echo "  ${GREEN}archive${NC} <name>                Move project to archive"
+    echo "  ${GREEN}restore${NC} <name>                Restore project from archive"
+    echo "  ${GREEN}help${NC}                          Show this help message"
+    echo "  ${GREEN}version${NC}                       Show version information"
+    echo ""
+    echo "${YELLOW}Examples:${NC}"
+    echo ""
+    echo "  # Create a new project"
+    echo "  ${CYAN}zfleak new-project myapp ~/projects/myapp${NC}"
+    echo ""
+    echo "  # Register auto-detection path"
+    echo "  ${CYAN}zfleak register-path myapp ~/projects/myapp${NC}"
+    echo ""
+    echo "  # Edit project config"
+    echo "  ${CYAN}zfleak edit myapp${NC}"
+    echo ""
+    echo "  # List all projects"
+    echo "  ${CYAN}zfleak list${NC}"
+    echo ""
+}
+
+# ============================================================================
+# Main Command Router
+# ============================================================================
+
+main() {
+    local command=$1
+    shift
+    
+    case "$command" in
+        new-project|new)
+            cmd_new_project "$@"
+            ;;
+        register-path|register)
+            cmd_register_path "$@"
+            ;;
+        list|ls)
+            cmd_list_projects "$@"
+            ;;
+        archive)
+            cmd_archive "$@"
+            ;;
+        restore)
+            cmd_restore "$@"
+            ;;
+        edit)
+            cmd_edit "$@"
+            ;;
+        show|cat)
+            cmd_show "$@"
+            ;;
+        version|-v|--version)
+            echo "zfleak version $VERSION"
+            ;;
+        help|-h|--help|"")
+            cmd_help
+            ;;
+        *)
+            print_error "Unknown command: $command"
+            echo ""
+            cmd_help
+            return 1
+            ;;
+    esac
+}
+
+main "$@"
