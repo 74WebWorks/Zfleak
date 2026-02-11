@@ -1,6 +1,6 @@
 # zfleak
 
-**Project Environment Manager for Zsh**
+**Project Environment Manager for Bash & Zsh**
 
 A lightweight, powerful CLI tool that manages project-specific environment variables with automatic detection and seamless switching between development environments.
 
@@ -13,6 +13,7 @@ A lightweight, powerful CLI tool that manages project-specific environment varia
 - 🎨 **Template System** - Quick project setup with sensible defaults
 - 🗂️ **Archive Management** - Keep old configs without cluttering active projects
 - 🎯 **Clean & Fast** - Minimal overhead, maximum productivity
+- 🐚 **Shell Compatible** - Works seamlessly with both Bash and Zsh on Linux and macOS
 
 ## 🎬 Quick Start
 
@@ -25,11 +26,12 @@ A lightweight, powerful CLI tool that manages project-specific environment varia
 git clone https://github.com/74WebWorks/Zfleak.git
 cd Zfleak
 
-# Run the installer
+# Run the installer (detects Bash or Zsh automatically)
 ./install.sh
 
 # Reload your shell
-source ~/.zshrc
+source ~/.zshrc    # For Zsh
+source ~/.bashrc   # For Bash
 ```
 
 #### Remote Installation
@@ -87,17 +89,16 @@ curl -fsSL https://raw.githubusercontent.com/74WebWorks/Zfleak/main/install.sh |
    cd ~/.zfleak-install
    ./install.sh
    ```
+   
+   The installer automatically detects your shell (Bash or Zsh) and configures the appropriate files.
 
-3. Add to your `~/.zshrc`:
+3. Reload your shell:
    ```bash
-   # Load zfleak
-   export PATH="$HOME/.local/bin:$PATH"
-   [[ -f "$HOME/.zfleak.d/lib/switcher.zsh" ]] && source "$HOME/.zfleak.d/lib/switcher.zsh"
-   ```
-
-4. Reload your shell:
-   ```bash
+   # For Zsh
    source ~/.zshrc
+   
+   # For Bash
+   source ~/.bashrc  # or ~/.bash_profile on macOS
    ```
 
 ### Basic Usage
