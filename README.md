@@ -18,13 +18,25 @@ A lightweight, powerful CLI tool that manages project-specific environment varia
 
 ### Installation
 
+#### From GitHub (Recommended)
+
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/zfleak.git
-cd zfleak
+git clone https://github.com/74WebWorks/Zfleak.git
+cd Zfleak
 
 # Run the installer
 ./install.sh
+
+# Reload your shell
+source ~/.zshrc
+```
+
+#### Remote Installation
+
+```bash
+# One-liner for remote installation
+bash <(curl -s https://raw.githubusercontent.com/74WebWorks/Zfleak/main/install.sh)
 
 # Reload your shell
 source ~/.zshrc
@@ -60,14 +72,14 @@ cd ~/projects/myapp
 #### Quick Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/zfleak/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/74WebWorks/Zfleak/main/install.sh | bash
 ```
 
 #### Manual Install
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/zfleak.git ~/.zfleak-install
+   git clone https://github.com/74WebWorks/Zfleak.git ~/.zfleak-install
    ```
 
 2. Run the installer:
@@ -263,7 +275,7 @@ zfleak new-project api-prod
 
 # Configure each differently
 zfleak edit api-dev       # Add dev database
-zfleak edit api-staging   # Add staging database  
+zfleak edit api-staging   # Add staging database
 zfleak edit api-prod      # Add prod database
 
 # Switch between them
@@ -357,5 +369,5 @@ Built with ❤️ for developers who work across multiple projects.
 
 ## 📮 Support
 
-- Report bugs: [GitHub Issues](https://github.com/yourusername/zfleak/issues)
-- Ask questions: [GitHub Discussions](https://github.com/yourusername/zfleak/discussions)
+- Report bugs: [GitHub Issues](https://github.com/74WebWorks/Zfleak/issues)
+- Ask questions: [GitHub Discussions](https://github.com/74WebWorks/Zfleak/discussions)
