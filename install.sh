@@ -20,6 +20,14 @@ INSTALL_DIR="$HOME/.local"
 BIN_DIR="$INSTALL_DIR/bin"
 CONFIG_DIR="$HOME/.zfleak.d"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_URL="https://github.com/74WebWorks/Zfleak.git"
+TEMP_DIR=""
+
+# Detect if running from remote install (script downloaded via curl/wget)
+REMOTE_INSTALL=false
+if [ -z "$SCRIPT_DIR" ] || [ "$SCRIPT_DIR" = "/" ] || [ ! -d "$SCRIPT_DIR/bin" ]; then
+    REMOTE_INSTALL=true
+fi
 
 # Detect user's shell
 USER_SHELL="$(basename "$SHELL")"
@@ -67,6 +75,26 @@ print_info() {
 # ============================================================================
 # Installation Steps
 # ============================================================================
+
+step_download_repo() {
+    if [ "$REMOTE_INSTALL" = true ]; then
+        echo -e "${CYAN}Downloading zfleak repository...${NC}"
+        echo ""
+        
+        TEMP_DIR=$(mktemp -d)
+        
+        if command -v git &> /dev/null; then
+            git clone --depth 1 "$REPO_URL" "$TEMP_DIR" 2>&1 | grep -v "Cloning into" || true
+            SCRIPT_DIR="$TEMP_DIR"
+            print_success "Downloaded repository using git"
+        else
+            print_error "git is not installed. Please install git or clone the repository manually."
+            return 1
+        fi
+        
+        echo ""
+    fi
+}
 
 step_create_dirs() {
     echo -e "${CYAN}Creating directories...${NC}"
@@ -192,6 +220,15 @@ step_verify_installation() {
     echo ""
 }
 
+step_cleanup() {
+    if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+        echo -e "${CYAN}Cleaning up temporary files...${NC}"
+        rm -rf "$TEMP_DIR"
+        print_success "Cleanup complete"
+        echo ""
+    fi
+}
+
 show_completion() {
     echo ""
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
@@ -234,6 +271,11 @@ main() {
     echo "  Config:  $CONFIG_DIR"
     echo "  Shell:   $USER_SHELL"
     echo "  RC File: $SHELL_RC"
+    
+    if [ "$REMOTE_INSTALL" = true ]; then
+        echo "  Mode:    Remote installation"
+    fi
+    
     echo ""
     echo -n "Continue with installation? (y/n) "
     read REPLY
@@ -251,12 +293,14 @@ main() {
     
     echo ""
     
+    step_download_repo
     step_create_dirs
     step_install_binary
     step_install_library
     step_create_template
     step_update_shell_config
     step_verify_installation
+    step_cleanup
     show_completion
 }
 
