@@ -200,7 +200,8 @@ main() {
     echo "  Binary:  $BIN_DIR/zfleak"
     echo "  Config:  $CONFIG_DIR"
     echo ""
-    read -p "Continue with installation? (y/n) " -n 1 -r
+    echo -n "Continue with installation? (y/n) "
+    read -n 1 -r REPLY
     echo ""
     
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
