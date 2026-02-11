@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Updated README installation instructions with valid GitHub repository links (74WebWorks/Zfleak)
+- Added remote installation option with one-liner bash command
+- Updated all documentation references to use correct GitHub organization
+
 ### Planned
 - Shell completion (zsh/bash)
 - Project templates (Django, Flask, Node.js, etc.)
