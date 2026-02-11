@@ -26,7 +26,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ============================================================================
 
 print_header() {
-    clear
     echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${BLUE}║${NC}  ${CYAN}zfleak${NC} - Project Environment Manager            ${BLUE}║${NC}"
     echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
@@ -184,7 +183,7 @@ show_completion() {
     echo "5. Get help anytime:"
     echo -e "   ${CYAN}zfleak help${NC}"
     echo ""
-    echo -e "${CYAN}Documentation:${NC} https://github.com/yourusername/zfleak"
+    echo -e "${CYAN}Documentation:${NC} https://github.com/74WebWorks/Zfleak"
     echo ""
 }
 
