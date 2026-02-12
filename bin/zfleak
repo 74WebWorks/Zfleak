@@ -279,7 +279,8 @@ cmd_edit() {
         fi
     fi
     
-    ${EDITOR:-code} "$config_file"
+    local editor="${EDITOR:-$(command -v vim || command -v nano)}"
+    $editor "$config_file"
 }
 
 # ============================================================================

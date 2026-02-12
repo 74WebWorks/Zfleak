@@ -27,12 +27,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Team collaboration support
 - Custom configuration directory support via ZFLEAK_CONFIG_DIR
 
-## [Unreleased]
+## [1.0.1]
 
-### Changed
+### Added
 - Updated README installation instructions with valid GitHub repository links (74WebWorks/Zfleak)
 - Added remote installation option with one-liner bash command
 - Updated all documentation references to use correct GitHub organization
+- Bash compatibility - zfleak now works seamlessly with Bash in addition to Zsh
+- Automatic shell detection during installation (Bash/Zsh)
+- Bash-specific switcher library for optimal compatibility
+- Support for .bashrc and .bash_profile configuration
+- Cross-platform support verified for Linux and macOS
+
+### Changed
+- Improved installer to detect and configure appropriate shell RC files
+- Enhanced shell reload instructions to cover both Bash and Zsh
+
+### Fixed
+- Removed `clear` command from installer for better compatibility
+- Fixed `read` command compatibility issues across different environments
 
 ### Planned
 - Shell completion (zsh/bash)
