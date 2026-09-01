@@ -15,8 +15,8 @@ Thumbs.db
 .Trashes
 
 # Testing
-test/
-*.test.zsh
+# test/
+# *.test.zsh
 
 # Build artifacts
 dist/
@@ -25,3 +25,6 @@ build/
 # Local configuration (user-specific)
 .local/
 *.local
+
+TASK.md
+**/*/TASK.md

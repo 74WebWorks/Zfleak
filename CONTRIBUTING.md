@@ -58,7 +58,24 @@ zfleak help
 
 ### Testing
 
-Before submitting a PR:
+zfleak uses [bats-core](https://github.com/bats-core/bats-core) for tests
+and [shellcheck](https://www.shellcheck.net/) for linting.
+
+```bash
+# Install the test tooling (macOS/Homebrew)
+brew install bats-core shellcheck
+
+# Run everything
+make test
+make lint
+```
+
+Tests live in `test/*.bats` and never touch your real `~/.zfleak.d` or
+shell rc files — each test sets `ZFLEAK_CONFIG_DIR`/`HOME` to a throwaway
+`mktemp -d`. Before submitting a PR:
+- Add or update a test for any behavior change (see AGENTS.md: a failing
+  test first, then the fix/feature).
+- `make lint && make test` must pass.
 - Test all commands work correctly
 - Test auto-detection functionality
 - Test with multiple projects
