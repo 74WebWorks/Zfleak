@@ -236,6 +236,7 @@ cmd_archive() {
     
     # Move to archive
     mkdir -p "$ARCHIVE_DIR"
+    chmod 700 "$ARCHIVE_DIR"
     mv "$config_file" "$ARCHIVE_DIR/"
     
     # Remove from projects.conf

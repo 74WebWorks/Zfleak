@@ -103,6 +103,8 @@ step_create_dirs() {
     mkdir -p "$BIN_DIR"
     mkdir -p "$CONFIG_DIR"
     mkdir -p "$CONFIG_DIR/.archive"
+    chmod 700 "$CONFIG_DIR"
+    chmod 700 "$CONFIG_DIR/.archive"
     
     print_success "Created $BIN_DIR"
     print_success "Created $CONFIG_DIR"
