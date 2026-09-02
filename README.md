@@ -60,6 +60,8 @@ cd ~/projects/myapp
 
 ## 📖 Documentation
 
+Full setup and command reference: [USAGE.md](USAGE.md)
+
 ### Table of Contents
 
 - [Installation](#installation-1)
