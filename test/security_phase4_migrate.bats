@@ -44,7 +44,7 @@ teardown() { zfleak_test_teardown; }
     [ "$status" -eq 0 ]
 
     run cat "$ZFLEAK_CONFIG_DIR/demo.zsh"
-    [[ "$output" == *"# zfleak:secret DB_PASSWORD=demo/DB_PASSWORD"* ]]
+    [[ "$output" == *"# zfleak:secret DB_PASSWORD=demo/DB_PASSWORD"* ]] || false
     [[ "$output" != *"export DB_PASSWORD=super-secret"* ]]
 
     run env ZFLEAK_VAULT_FILE_DIR="$ZFLEAK_VAULT_FILE_DIR" ZFLEAK_VAULT_BACKEND=file bash -c "

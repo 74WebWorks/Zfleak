@@ -18,7 +18,7 @@ teardown() { zfleak_test_teardown; }
         echo \"VAR=\$DEMO_VAR\"
     "
     [ "$status" -eq 0 ]
-    [[ "$output" == *"ACTIVE=demo"* ]]
+    [[ "$output" == *"ACTIVE=demo"* ]] || false
     [[ "$output" == *"VAR=hello"* ]]
 }
 
@@ -40,7 +40,7 @@ teardown() { zfleak_test_teardown; }
         echo \"ACTIVE=[\$ACTIVE_PROJECT]\"
     "
     [ "$status" -eq 0 ]
-    [[ "$output" == *"VAR=[]"* ]]
+    [[ "$output" == *"VAR=[]"* ]] || false
     [[ "$output" == *"ACTIVE=[]"* ]]
 }
 

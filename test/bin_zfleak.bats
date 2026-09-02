@@ -18,7 +18,7 @@ teardown() { zfleak_test_teardown; }
 @test "help documents the global backend option and aliases" {
     run "$ZFLEAK_BIN" --help
     [ "$status" -eq 0 ]
-    [[ "$output" == *"--backend <backend>"* ]]
+    [[ "$output" == *"--backend <backend>"* ]] || false
     [[ "$output" == *"Aliases:"* ]]
 }
 

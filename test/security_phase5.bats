@@ -48,7 +48,7 @@ teardown() { zfleak_test_teardown; }
         echo \"AFTER=[\${DEMO_VAR:-}]\"
     "
     [ "$status" -eq 0 ]
-    [[ "$output" == *"hello"* ]]
+    [[ "$output" == *"hello"* ]] || false
     [[ "$output" == *"AFTER=[]"* ]]
 }
 
@@ -68,7 +68,7 @@ teardown() { zfleak_test_teardown; }
         echo \"AFTER=[\${DEMO_SECRET:-}]\"
     "
     [ "$status" -eq 0 ]
-    [[ "$output" == *"s3cr3t"* ]]
+    [[ "$output" == *"s3cr3t"* ]] || false
     [[ "$output" == *"AFTER=[]"* ]]
 }
 
