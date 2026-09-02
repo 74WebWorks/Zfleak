@@ -17,6 +17,13 @@ teardown() { zfleak_test_teardown; }
     [[ "$output" == *"--to-backend"* ]]
 }
 
+@test "migrate rejects an unsupported backend" {
+    "$ZFLEAK_BIN" new-project demo >/dev/null
+    run "$ZFLEAK_BIN" migrate demo --to-backend invalid
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"keychain"* ]]
+}
+
 @test "migrate errors for an unknown project" {
     run env ZFLEAK_VAULT_FILE_DIR="$ZFLEAK_VAULT_FILE_DIR" "$ZFLEAK_BIN" migrate ghost --to-backend file
     [ "$status" -eq 1 ]

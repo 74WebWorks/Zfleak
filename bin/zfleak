@@ -61,6 +61,18 @@ _validate_project_name() {
     fi
 }
 
+_validate_vault_backend() {
+    case "$1" in
+        keychain|pass|file)
+            return 0
+            ;;
+        *)
+            print_error "Invalid vault backend: '$1' (use keychain, pass, or file)"
+            return 1
+            ;;
+    esac
+}
+
 _zfleak_sha256() {
     if command -v sha256sum >/dev/null 2>&1; then
         printf '%s' "$1" | sha256sum | cut -d' ' -f1
@@ -454,7 +466,9 @@ cmd_migrate() {
         echo "Usage: zfleak migrate <project-name> --to-backend <name>"
         return 1
     fi
-    
+
+    _validate_vault_backend "$to_backend" || return 1
+
     local config_file="$CONFIG_DIR/${project_name}.zsh"
     if [[ ! -f "$config_file" ]]; then
         print_error "Project '$project_name' not found"
@@ -631,24 +645,32 @@ cmd_show() {
 # ============================================================================
 cmd_help() {
     print_header
-    echo "Usage: ${CYAN}zfleak${NC} <command> [options]"
+    echo "Usage: ${CYAN}zfleak${NC} [--backend <backend>] <command> [arguments...]"
+    echo ""
+    echo "${YELLOW}Global options:${NC}"
+    echo ""
+    echo "  ${GREEN}--backend${NC} <backend>            Use keychain, pass, or file"
+    echo "  ${GREEN}-h, --help${NC}                    Show this help message"
+    echo "  ${GREEN}-v, --version${NC}                 Show version information"
     echo ""
     echo "${YELLOW}Commands:${NC}"
     echo ""
-    echo "  ${GREEN}new-project${NC} <name> [path]     Create a new project configuration"
-    echo "  ${GREEN}register-path${NC} <name> <path>   Register auto-detection path for a project"
+    echo "  ${GREEN}new-project${NC} <project-name> [path]  Create a new project configuration"
+    echo "  ${GREEN}register-path${NC} <project-name> <path>  Register auto-detection path"
     echo "  ${GREEN}list${NC}                          List all projects"
-    echo "  ${GREEN}edit${NC} <name>                   Edit project configuration"
-    echo "  ${GREEN}show${NC} <name> [--reveal]        Display project configuration (masked by default)"
-    echo "  ${GREEN}archive${NC} <name>                Move project to archive"
-    echo "  ${GREEN}restore${NC} <name>                Restore project from archive"
+    echo "  ${GREEN}edit${NC} <project-name>           Edit project configuration"
+    echo "  ${GREEN}show${NC} <project-name> [--reveal]  Display project configuration (masked by default)"
+    echo "  ${GREEN}archive${NC} <project-name>         Move project to archive"
+    echo "  ${GREEN}restore${NC} <project-name>         Restore project from archive"
     echo "  ${GREEN}set-passphrase${NC}                Set the passphrase gating --reveal on sensitive projects"
     echo "  ${GREEN}unlock${NC}                        Clear a reveal lockout (requires OS authentication)"
     echo "  ${GREEN}vault-backend${NC}                 Show the resolved secret vault backend"
-    echo "  ${GREEN}migrate${NC} <name> --to-backend <b>  Move a project's plaintext secrets into a vault backend"
-    echo "  ${GREEN}run${NC} <name> -- <command...>    Run a command with the project's env in that process only"
+    echo "  ${GREEN}migrate${NC} <project-name> --to-backend <backend>  Move plaintext values to a vault"
+    echo "  ${GREEN}run${NC} <project-name> -- <command...>  Run a command with the project's env only"
     echo "  ${GREEN}help${NC}                          Show this help message"
     echo "  ${GREEN}version${NC}                       Show version information"
+    echo ""
+    echo "${YELLOW}Aliases:${NC} new, register, ls, cat"
     echo ""
     echo "${YELLOW}Examples:${NC}"
     echo ""
@@ -677,6 +699,12 @@ main() {
     fi
 
     if [[ "$1" == "--backend" ]]; then
+        if [[ $# -lt 2 ]]; then
+            print_error "Backend is required"
+            echo "Usage: zfleak [--backend <backend>] <command> [arguments...]"
+            return 1
+        fi
+        _validate_vault_backend "$2" || return 1
         export ZFLEAK_VAULT_BACKEND="$2"
         shift 2
     fi

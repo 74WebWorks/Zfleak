@@ -15,6 +15,25 @@ teardown() { zfleak_test_teardown; }
     [[ "$output" == *"Usage:"* ]]
 }
 
+@test "help documents the global backend option and aliases" {
+    run "$ZFLEAK_BIN" --help
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"--backend <backend>"* ]]
+    [[ "$output" == *"Aliases:"* ]]
+}
+
+@test "--backend requires a value" {
+    run "$ZFLEAK_BIN" --backend
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"backend"* ]]
+}
+
+@test "--backend rejects an unsupported backend" {
+    run "$ZFLEAK_BIN" --backend invalid vault-backend
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"keychain"* ]]
+}
+
 @test "unknown command errors and shows help" {
     run "$ZFLEAK_BIN" bogus-command
     [ "$status" -eq 1 ]
