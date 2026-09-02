@@ -58,6 +58,67 @@ _validate_project_name() {
     fi
 }
 
+_zfleak_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        printf '%s' "$1" | sha256sum | cut -d' ' -f1
+    else
+        printf '%s' "$1" | shasum -a 256 | cut -d' ' -f1
+    fi
+}
+
+_zfleak_is_sensitive() {
+    grep -q '^export ZFLEAK_SENSITIVE=true' "$1" 2>/dev/null
+}
+
+# ============================================================================
+# Command: set-passphrase
+# ============================================================================
+cmd_set_passphrase() {
+    local passphrase confirm
+    printf "New reveal passphrase: "
+    read -rs passphrase
+    echo ""
+    printf "Confirm passphrase: "
+    read -rs confirm
+    echo ""
+    
+    if [[ -z "$passphrase" ]]; then
+        print_error "Passphrase cannot be empty"
+        return 1
+    fi
+    
+    if [[ "$passphrase" != "$confirm" ]]; then
+        print_error "Passphrases did not match"
+        return 1
+    fi
+    
+    _zfleak_sha256 "$passphrase" > "$CONFIG_DIR/.reveal_passphrase"
+    chmod 600 "$CONFIG_DIR/.reveal_passphrase"
+    print_success "Reveal passphrase set"
+}
+
+# Prompts for the reveal passphrase and checks it against the stored hash.
+# Used by `show --reveal` to gate sensitive projects.
+_zfleak_gate_reveal() {
+    local project_name=$1
+    local passphrase_file="$CONFIG_DIR/.reveal_passphrase"
+    
+    if [[ ! -f "$passphrase_file" ]]; then
+        print_error "No reveal passphrase set. Run: zfleak set-passphrase"
+        return 1
+    fi
+    
+    local attempt
+    printf "Passphrase to reveal '%s': " "$project_name"
+    read -rs attempt
+    echo ""
+    
+    if [[ "$(_zfleak_sha256 "$attempt")" != "$(cat "$passphrase_file")" ]]; then
+        print_error "Incorrect passphrase"
+        return 1
+    fi
+}
+
 # ============================================================================
 # Command: new-project
 # ============================================================================
@@ -338,6 +399,10 @@ cmd_show() {
     echo "${CYAN}File: ${config_file}${NC}"
     echo ""
     
+    if [[ "$reveal" == true ]] && _zfleak_is_sensitive "$config_file"; then
+        _zfleak_gate_reveal "$project_name" || return 1
+    fi
+    
     if [[ "$reveal" == true ]]; then
         cat "$config_file"
     else
@@ -363,6 +428,7 @@ cmd_help() {
     echo "  ${GREEN}show${NC} <name> [--reveal]        Display project configuration (masked by default)"
     echo "  ${GREEN}archive${NC} <name>                Move project to archive"
     echo "  ${GREEN}restore${NC} <name>                Restore project from archive"
+    echo "  ${GREEN}set-passphrase${NC}                Set the passphrase gating --reveal on sensitive projects"
     echo "  ${GREEN}help${NC}                          Show this help message"
     echo "  ${GREEN}version${NC}                       Show version information"
     echo ""
@@ -411,6 +477,9 @@ main() {
             ;;
         show|cat)
             cmd_show "$@"
+            ;;
+        set-passphrase)
+            cmd_set_passphrase "$@"
             ;;
         version|-v|--version)
             echo "zfleak version $VERSION"
