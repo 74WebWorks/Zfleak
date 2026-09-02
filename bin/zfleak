@@ -58,6 +58,149 @@ _validate_project_name() {
     fi
 }
 
+_zfleak_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        printf '%s' "$1" | sha256sum | cut -d' ' -f1
+    else
+        printf '%s' "$1" | shasum -a 256 | cut -d' ' -f1
+    fi
+}
+
+_zfleak_is_sensitive() {
+    grep -q '^export ZFLEAK_SENSITIVE=true' "$1" 2>/dev/null
+}
+
+# ============================================================================
+# Command: set-passphrase
+# ============================================================================
+cmd_set_passphrase() {
+    local passphrase confirm
+    printf "New reveal passphrase: "
+    read -rs passphrase
+    echo ""
+    printf "Confirm passphrase: "
+    read -rs confirm
+    echo ""
+    
+    if [[ -z "$passphrase" ]]; then
+        print_error "Passphrase cannot be empty"
+        return 1
+    fi
+    
+    if [[ "$passphrase" != "$confirm" ]]; then
+        print_error "Passphrases did not match"
+        return 1
+    fi
+    
+    _zfleak_sha256 "$passphrase" > "$CONFIG_DIR/.reveal_passphrase"
+    chmod 600 "$CONFIG_DIR/.reveal_passphrase"
+    print_success "Reveal passphrase set"
+}
+
+# Appends a tab-separated audit line: timestamp, tty, project, event.
+_zfleak_audit_log() {
+    local project_name=$1
+    local event=$2
+    local tty_name
+    tty_name=$(tty 2>/dev/null || echo "unknown")
+    printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tty_name" "$project_name" "$event" >> "$CONFIG_DIR/.audit.log"
+    chmod 600 "$CONFIG_DIR/.audit.log"
+}
+
+# Verifies the current OS user's login password. Only implemented for
+# macOS today. ZFLEAK_TEST_AUTH_OK is a test-only seam (bats can't drive
+# a real login-password prompt/dscl in CI) and isn't documented for
+# end users.
+_zfleak_os_authenticate() {
+    local password=$1
+    if [[ "$ZFLEAK_TEST_AUTH_OK" == "1" ]]; then
+        return 0
+    fi
+    if [[ "$ZFLEAK_TEST_AUTH_OK" == "0" ]]; then
+        return 1
+    fi
+    if [[ "$(uname)" == "Darwin" ]]; then
+        dscl . -authonly "$(whoami)" "$password" >/dev/null 2>&1
+        return $?
+    fi
+    print_error "OS-authenticated unlock is currently only supported on macOS"
+    return 1
+}
+
+# Prompts for the reveal passphrase and checks it against the stored hash.
+# Used by `show --reveal` to gate sensitive projects. Tracks failed
+# attempts and locks out reveal after 3, logging every failure/lockout.
+_zfleak_gate_reveal() {
+    local project_name=$1
+    local passphrase_file="$CONFIG_DIR/.reveal_passphrase"
+    local lockout_file="$CONFIG_DIR/.lockout"
+    local locked_file="$CONFIG_DIR/.locked"
+    
+    if [[ -f "$locked_file" ]]; then
+        print_error "Reveal is locked out after too many failed attempts. Run: zfleak unlock"
+        return 1
+    fi
+    
+    if [[ ! -f "$passphrase_file" ]]; then
+        print_error "No reveal passphrase set. Run: zfleak set-passphrase"
+        return 1
+    fi
+    
+    local attempt
+    printf "Passphrase to reveal '%s': " "$project_name"
+    read -rs attempt
+    echo ""
+    
+    if [[ "$(_zfleak_sha256 "$attempt")" == "$(cat "$passphrase_file")" ]]; then
+        rm -f "$lockout_file"
+        return 0
+    fi
+    
+    print_error "Incorrect passphrase"
+    _zfleak_audit_log "$project_name" "failed_attempt"
+    
+    local attempts=0
+    [[ -f "$lockout_file" ]] && attempts=$(cat "$lockout_file")
+    attempts=$((attempts + 1))
+    echo "$attempts" > "$lockout_file"
+    chmod 600 "$lockout_file"
+    
+    if [[ "$attempts" -ge 3 ]]; then
+        touch "$locked_file"
+        chmod 600 "$locked_file"
+        _zfleak_audit_log "$project_name" "lockout"
+        print_error "Too many failed attempts. Locked out. Run: zfleak unlock"
+    fi
+    
+    return 1
+}
+
+# ============================================================================
+# Command: unlock
+# ============================================================================
+cmd_unlock() {
+    local locked_file="$CONFIG_DIR/.locked"
+    local lockout_file="$CONFIG_DIR/.lockout"
+    
+    if [[ ! -f "$locked_file" ]]; then
+        print_info "Not currently locked out"
+        return 0
+    fi
+    
+    local password
+    printf "OS login password to unlock: "
+    read -rs password
+    echo ""
+    
+    if ! _zfleak_os_authenticate "$password"; then
+        print_error "Authentication failed"
+        return 1
+    fi
+    
+    rm -f "$locked_file" "$lockout_file"
+    print_success "Unlocked"
+}
+
 # ============================================================================
 # Command: new-project
 # ============================================================================
@@ -338,6 +481,10 @@ cmd_show() {
     echo "${CYAN}File: ${config_file}${NC}"
     echo ""
     
+    if [[ "$reveal" == true ]] && _zfleak_is_sensitive "$config_file"; then
+        _zfleak_gate_reveal "$project_name" || return 1
+    fi
+    
     if [[ "$reveal" == true ]]; then
         cat "$config_file"
     else
@@ -363,6 +510,8 @@ cmd_help() {
     echo "  ${GREEN}show${NC} <name> [--reveal]        Display project configuration (masked by default)"
     echo "  ${GREEN}archive${NC} <name>                Move project to archive"
     echo "  ${GREEN}restore${NC} <name>                Restore project from archive"
+    echo "  ${GREEN}set-passphrase${NC}                Set the passphrase gating --reveal on sensitive projects"
+    echo "  ${GREEN}unlock${NC}                        Clear a reveal lockout (requires OS authentication)"
     echo "  ${GREEN}help${NC}                          Show this help message"
     echo "  ${GREEN}version${NC}                       Show version information"
     echo ""
@@ -411,6 +560,12 @@ main() {
             ;;
         show|cat)
             cmd_show "$@"
+            ;;
+        set-passphrase)
+            cmd_set_passphrase "$@"
+            ;;
+        unlock)
+            cmd_unlock "$@"
             ;;
         version|-v|--version)
             echo "zfleak version $VERSION"
