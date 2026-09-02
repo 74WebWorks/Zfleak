@@ -13,7 +13,14 @@ zfleak_test_setup() {
 }
 
 zfleak_test_teardown() {
-    [[ -n "$ZFLEAK_CONFIG_DIR" && -d "$ZFLEAK_CONFIG_DIR" ]] && rm -rf "$ZFLEAK_CONFIG_DIR"
+    # An `if` (not a bare `[[ ]] && rm` one-liner) so a "nothing to clean
+    # up" case returns 0 instead of the false condition's exit status —
+    # bats fails the test if teardown's own exit code is nonzero, even
+    # for a skipped test (e.g. setup() called `skip` before ever setting
+    # ZFLEAK_CONFIG_DIR).
+    if [[ -n "$ZFLEAK_CONFIG_DIR" && -d "$ZFLEAK_CONFIG_DIR" ]]; then
+        rm -rf "$ZFLEAK_CONFIG_DIR"
+    fi
 }
 
 # Portable octal permission bits for a file/dir. GNU stat's -c is tried
