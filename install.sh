@@ -103,6 +103,8 @@ step_create_dirs() {
     mkdir -p "$BIN_DIR"
     mkdir -p "$CONFIG_DIR"
     mkdir -p "$CONFIG_DIR/.archive"
+    chmod 700 "$CONFIG_DIR"
+    chmod 700 "$CONFIG_DIR/.archive"
     
     print_success "Created $BIN_DIR"
     print_success "Created $CONFIG_DIR"
@@ -149,6 +151,7 @@ step_create_template() {
 
 # Add any settings that should be available to all projects here
 EOF
+        chmod 600 "$CONFIG_DIR/common.zsh"
         print_success "Created common.zsh"
     else
         print_warning "common.zsh already exists, skipping"
@@ -157,6 +160,7 @@ EOF
     # Create projects.conf if it doesn't exist
     if [[ ! -f "$CONFIG_DIR/projects.conf" ]]; then
         touch "$CONFIG_DIR/projects.conf"
+        chmod 600 "$CONFIG_DIR/projects.conf"
         print_success "Created projects.conf"
     else
         print_warning "projects.conf already exists, skipping"

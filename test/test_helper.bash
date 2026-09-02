@@ -15,3 +15,13 @@ zfleak_test_setup() {
 zfleak_test_teardown() {
     [[ -n "$ZFLEAK_CONFIG_DIR" && -d "$ZFLEAK_CONFIG_DIR" ]] && rm -rf "$ZFLEAK_CONFIG_DIR"
 }
+
+# Portable octal permission bits for a file/dir. GNU stat's -c is tried
+# first: on macOS (BSD stat) -c isn't valid and fails cleanly, so this
+# falls through to BSD's -f "%Lp". Trying BSD's "-f" first doesn't work
+# the other way around: GNU stat's -f means "filesystem status" (a
+# different, unrelated flag) and still exits 0 with garbage output, so
+# the fallback would never trigger on Linux.
+zfleak_perms() {
+    stat -c "%a" "$1" 2>/dev/null || stat -f "%Lp" "$1"
+}
