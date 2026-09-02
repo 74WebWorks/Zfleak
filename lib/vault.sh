@@ -83,3 +83,29 @@ _vault_delete_keychain() {
     [[ -n "$ZFLEAK_KEYCHAIN" ]] && args+=("$ZFLEAK_KEYCHAIN")
     security delete-generic-password "${args[@]}" >/dev/null 2>&1
 }
+
+# ============================================================================
+# pass (passwordstore.org) backend
+# ============================================================================
+# Each vault key becomes a pass entry at "zfleak/<key>", value stored as
+# the first line of the entry (pass's usual convention for the "main"
+# secret, with room for metadata on following lines if ever needed).
+
+_vault_get_pass() {
+    local key=$1
+    local entry
+    entry="$(pass show "zfleak/$key" 2>/dev/null)" || return 1
+    printf '%s\n' "$entry" | head -n1
+}
+
+_vault_set_pass() {
+    local key=$1
+    local value=$2
+    printf '%s\n' "$value" | pass insert -m -f "zfleak/$key" >/dev/null 2>&1
+}
+
+_vault_delete_pass() {
+    local key=$1
+    pass rm -f "zfleak/$key" >/dev/null 2>&1
+}
+
