@@ -313,10 +313,12 @@ cmd_edit() {
 # ============================================================================
 cmd_show() {
     local project_name=$1
+    local reveal=false
+    [[ "$2" == "--reveal" ]] && reveal=true
     
     if [[ -z "$project_name" ]]; then
         print_error "Project name is required"
-        echo "Usage: zfleak show <project-name>"
+        echo "Usage: zfleak show <project-name> [--reveal]"
         return 1
     fi
     
@@ -335,7 +337,14 @@ cmd_show() {
     echo "${CYAN}Configuration for: ${project_name}${NC}"
     echo "${CYAN}File: ${config_file}${NC}"
     echo ""
-    cat "$config_file"
+    
+    if [[ "$reveal" == true ]]; then
+        cat "$config_file"
+    else
+        print_warning "Secret values are masked. Use 'zfleak show $project_name --reveal' to view them."
+        echo ""
+        sed -E 's/^(export[[:space:]]+[A-Za-z_][A-Za-z0-9_]*=).+$/\1********/' "$config_file"
+    fi
 }
 
 # ============================================================================
@@ -351,7 +360,7 @@ cmd_help() {
     echo "  ${GREEN}register-path${NC} <name> <path>   Register auto-detection path for a project"
     echo "  ${GREEN}list${NC}                          List all projects"
     echo "  ${GREEN}edit${NC} <name>                   Edit project configuration"
-    echo "  ${GREEN}show${NC} <name>                   Display project configuration"
+    echo "  ${GREEN}show${NC} <name> [--reveal]        Display project configuration (masked by default)"
     echo "  ${GREEN}archive${NC} <name>                Move project to archive"
     echo "  ${GREEN}restore${NC} <name>                Restore project from archive"
     echo "  ${GREEN}help${NC}                          Show this help message"

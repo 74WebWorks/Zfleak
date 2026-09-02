@@ -152,3 +152,24 @@ EOF
     "
     [[ "$output" == *"ACTIVE=[]"* ]]
 }
+
+# ----------------------------------------------------------------------------
+# Task 5: mask secrets in `zfleak show` by default
+# ----------------------------------------------------------------------------
+
+@test "show masks exported values by default" {
+    "$ZFLEAK_BIN" new-project demo >/dev/null
+    printf 'export DB_PASSWORD=super-secret\n' >> "$ZFLEAK_CONFIG_DIR/demo.zsh"
+    run "$ZFLEAK_BIN" show demo
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"super-secret"* ]]
+    [[ "$output" == *"DB_PASSWORD=********"* ]]
+}
+
+@test "show --reveal prints the real values" {
+    "$ZFLEAK_BIN" new-project demo >/dev/null
+    printf 'export DB_PASSWORD=super-secret\n' >> "$ZFLEAK_CONFIG_DIR/demo.zsh"
+    run "$ZFLEAK_BIN" show demo --reveal
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"DB_PASSWORD=super-secret"* ]]
+}
