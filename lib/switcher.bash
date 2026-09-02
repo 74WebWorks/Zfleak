@@ -15,6 +15,8 @@ declare -A LOADED_ENV_VARS
 # Store current project
 export ACTIVE_PROJECT=""
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vault.sh"
+
 # Configuration directory
 CONFIG_DIR="${ZFLEAK_CONFIG_DIR:-$HOME/.zfleak.d}"
 ARCHIVE_DIR="$CONFIG_DIR/.archive"
@@ -64,6 +66,7 @@ use-project() {
         _zfleak_confirm_load "$config_file" || return 1
         echo "🔄 Loading project: $project"
         source "$config_file"
+        _zfleak_resolve_secret_refs "$config_file" || return 1
         export ACTIVE_PROJECT="$project"
         echo "✅ Loaded active project: $project"
         _track_project_vars "$config_file"
@@ -73,6 +76,7 @@ use-project() {
         _zfleak_confirm_load "$archive_file" || return 1
         echo "🔄 Loading archived project: $project"
         source "$archive_file"
+        _zfleak_resolve_secret_refs "$archive_file" || return 1
         export ACTIVE_PROJECT="$project (archived)"
         echo "✅ Loaded archived project: $project"
         _track_project_vars "$archive_file"
@@ -157,6 +161,27 @@ _track_project_vars() {
     while IFS= read -r line; do
         if [[ "$line" =~ ^export[[:space:]]+([A-Z_][A-Z0-9_]*)= ]]; then
             local var_name="${BASH_REMATCH[1]}"
+            LOADED_ENV_VARS[$var_name]=1
+        fi
+    done < "$config_file"
+}
+
+# ============================================================================
+# Internal: Resolve `# zfleak:secret VAR=<vault-key>` references
+# ============================================================================
+_zfleak_resolve_secret_refs() {
+    local config_file=$1
+    local var_name vault_key value
+    
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^#[[:space:]]*zfleak:secret[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.+)$ ]]; then
+            var_name="${BASH_REMATCH[1]}"
+            vault_key="${BASH_REMATCH[2]}"
+            if ! value="$(_vault_get "$vault_key")"; then
+                echo "❌ Failed to resolve secret '$vault_key' for \$$var_name" >&2
+                return 1
+            fi
+            export "$var_name=$value"
             LOADED_ENV_VARS[$var_name]=1
         fi
     done < "$config_file"

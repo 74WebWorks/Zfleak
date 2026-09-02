@@ -117,3 +117,64 @@ teardown() { zfleak_test_teardown; }
     [ "$status" -eq 0 ]
     [ -f "$ZFLEAK_CONFIG_DIR/demo.zsh" ]
 }
+
+# ----------------------------------------------------------------------------
+# Task 3: `# zfleak:secret VAR=<vault-key>` config-file references
+# ----------------------------------------------------------------------------
+
+@test "(bash) use-project resolves # zfleak:secret references via the vault" {
+    cat > "$ZFLEAK_CONFIG_DIR/demo.zsh" <<'EOF'
+export DEMO_VAR=hello
+# zfleak:secret DEMO_SECRET=demo/db-password
+EOF
+    run bash -c "
+        source '$ZFLEAK_REPO_ROOT/lib/switcher.bash'
+        _vault_get_mock() { echo \"resolved-\$1\"; }
+        ZFLEAK_VAULT_BACKEND=mock use-project demo
+        echo \"SECRET=[\$DEMO_SECRET]\"
+        echo \"VAR=[\$DEMO_VAR]\"
+    "
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"SECRET=[resolved-demo/db-password]"* ]] || false
+    [[ "$output" == *"VAR=[hello]"* ]]
+}
+
+@test "(bash) clear-project also unsets vault-resolved secrets" {
+    cat > "$ZFLEAK_CONFIG_DIR/demo.zsh" <<'EOF'
+# zfleak:secret DEMO_SECRET=demo/db-password
+EOF
+    run bash -c "
+        source '$ZFLEAK_REPO_ROOT/lib/switcher.bash'
+        _vault_get_mock() { echo \"resolved-\$1\"; }
+        ZFLEAK_VAULT_BACKEND=mock use-project demo >/dev/null
+        clear-project >/dev/null
+        echo \"SECRET=[\$DEMO_SECRET]\"
+    "
+    [[ "$output" == *"SECRET=[]"* ]]
+}
+
+@test "(zsh) use-project resolves # zfleak:secret references via the vault" {
+    cat > "$ZFLEAK_CONFIG_DIR/demo.zsh" <<'EOF'
+export DEMO_VAR=hello
+# zfleak:secret DEMO_SECRET=demo/db-password
+EOF
+    run zsh -c "
+        source '$ZFLEAK_REPO_ROOT/lib/switcher.zsh'
+        _vault_get_mock() { echo \"resolved-\$1\"; }
+        ZFLEAK_VAULT_BACKEND=mock use-project demo
+        echo \"SECRET=[\$DEMO_SECRET]\"
+    "
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"SECRET=[resolved-demo/db-password]"* ]]
+}
+
+@test "use-project fails clearly if a secret reference can't be resolved" {
+    cat > "$ZFLEAK_CONFIG_DIR/demo.zsh" <<'EOF'
+# zfleak:secret DEMO_SECRET=demo/db-password
+EOF
+    run bash -c "
+        source '$ZFLEAK_REPO_ROOT/lib/switcher.bash'
+        use-project demo
+    "
+    [ "$status" -ne 0 ]
+}

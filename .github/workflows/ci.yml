@@ -16,9 +16,13 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y bats shellcheck zsh
 
-      - name: Install bats-core and shellcheck (macOS)
+      - name: Install bats-core, shellcheck, and a modern bash (macOS)
         if: runner.os == 'macOS'
-        run: brew install bats-core shellcheck
+        # macOS ships bash 3.2 (no associative arrays), which
+        # lib/switcher.bash's cleanup tracking relies on.
+        run: |
+          brew install bats-core shellcheck bash
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
 
       - name: Lint
         run: make lint
