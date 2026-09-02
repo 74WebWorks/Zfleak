@@ -667,6 +667,11 @@ cmd_help() {
 # ============================================================================
 
 main() {
+    if [[ $# -eq 0 ]]; then
+        cmd_help
+        return 0
+    fi
+
     if [[ "$1" == "--backend" ]]; then
         export ZFLEAK_VAULT_BACKEND="$2"
         shift 2

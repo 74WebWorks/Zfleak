@@ -10,12 +10,9 @@ teardown() { zfleak_test_teardown; }
 }
 
 @test "help prints usage when given no command" {
-    # Known bug: `shift` in main() runs before checking argc, so zsh's
-    # `set -e` aborts with a non-zero exit instead of reaching cmd_help.
-    # Pinning current (broken) behavior here; see TASK.md Phase 1.
     run "$ZFLEAK_BIN"
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"shift count"* ]]
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Usage:"* ]]
 }
 
 @test "unknown command errors and shows help" {
