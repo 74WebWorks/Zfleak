@@ -11,7 +11,7 @@ set -e
 ZFLEAK_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$ZFLEAK_SCRIPT_DIR/../lib/vault.sh"
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 CONFIG_DIR="${ZFLEAK_CONFIG_DIR:-$HOME/.zfleak.d}"
 ARCHIVE_DIR="$CONFIG_DIR/.archive"
 PROJECTS_CONFIG="$CONFIG_DIR/projects.conf"
