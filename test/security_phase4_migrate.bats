@@ -68,3 +68,15 @@ teardown() { zfleak_test_teardown; }
     "
     [[ "$output" == *"DB=[super-secret]"* ]]
 }
+
+@test "migrate preserves the sensitive-project marker" {
+    "$ZFLEAK_BIN" new-project demo >/dev/null
+    printf 'export ZFLEAK_SENSITIVE=true\n' >> "$ZFLEAK_CONFIG_DIR/demo.zsh"
+
+    run env ZFLEAK_VAULT_FILE_DIR="$ZFLEAK_VAULT_FILE_DIR" \
+        "$ZFLEAK_BIN" migrate demo --to-backend file
+    [ "$status" -eq 0 ]
+
+    run grep -q '^export ZFLEAK_SENSITIVE=true$' "$ZFLEAK_CONFIG_DIR/demo.zsh"
+    [ "$status" -eq 0 ]
+}

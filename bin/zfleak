@@ -470,6 +470,10 @@ cmd_migrate() {
         if [[ "$line" =~ ^export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
             var_name="${match[1]}"
             value="${match[2]}"
+            if [[ "$var_name" == "ZFLEAK_SENSITIVE" ]]; then
+                echo "$line" >> "$tmp_file"
+                continue
+            fi
             vault_key="${project_name}/${var_name}"
             if ! ZFLEAK_VAULT_BACKEND="$to_backend" _vault_set "$vault_key" "$value"; then
                 print_error "Failed to store $var_name in backend '$to_backend'"

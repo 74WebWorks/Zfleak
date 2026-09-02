@@ -315,9 +315,8 @@ select only obviously sensitive names, does not evaluate shell expansion, and
 does not provide a dry run or backup. Review the result and ensure the target
 backend is ready before running it.
 
-With the current implementation, add `ZFLEAK_SENSITIVE=true` after
-migration. Otherwise migration converts that marker into a secret reference
-and direct shell loading will not be blocked.
+The `ZFLEAK_SENSITIVE=true` control variable is preserved by
+migration, so the sensitive-project block remains active.
 
 ## Command Reference
 
