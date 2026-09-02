@@ -23,21 +23,16 @@ ARCHIVE_DIR="$CONFIG_DIR/.archive"
 PROJECTS_CONFIG="$CONFIG_DIR/projects.conf"
 
 # ============================================================================
-# Internal: gate loading of projects marked ZFLEAK_SENSITIVE=true
+# Internal: block loading of projects marked ZFLEAK_SENSITIVE=true
 # ============================================================================
 _zfleak_confirm_load() {
     local file=$1
     grep -q '^export ZFLEAK_SENSITIVE=true' "$file" 2>/dev/null || return 0
-    [[ "$ZFLEAK_ASSUME_YES" == "1" ]] && return 0
 
-    echo "⚠️  '$file' is marked SENSITIVE (production credentials)."
-    printf "Type 'yes' to load it: "
-    read -r _zfleak_confirm
-    if [[ "$_zfleak_confirm" != "yes" ]]; then
-        echo "❌ Aborted loading sensitive project"
-        return 1
-    fi
-    return 0
+    echo "❌ '$file' is marked SENSITIVE (production credentials)."
+    echo "   use-project cannot load sensitive projects directly."
+    echo "   Use: zfleak run <project> -- <command...>"
+    return 1
 }
 
 # ============================================================================

@@ -490,6 +490,68 @@ cmd_migrate() {
 }
 
 # ============================================================================
+# Command: run
+# ============================================================================
+# Resolves a project's environment (plain export lines + # zfleak:secret
+# references) into the environment of a single child process only -
+# nothing is exported into the calling shell, unlike use-project.
+cmd_run() {
+    local project_name=$1
+    
+    if [[ -z "$project_name" ]]; then
+        print_error "Project name is required"
+        echo "Usage: zfleak run <project-name> -- <command...>"
+        return 1
+    fi
+    shift
+    
+    _validate_project_name "$project_name" || return 1
+    
+    if [[ "$1" != "--" ]]; then
+        print_error "Missing '--' separator before the command"
+        echo "Usage: zfleak run <project-name> -- <command...>"
+        return 1
+    fi
+    shift
+    
+    if [[ $# -eq 0 ]]; then
+        print_error "A command to run is required after '--'"
+        echo "Usage: zfleak run <project-name> -- <command...>"
+        return 1
+    fi
+    
+    local config_file="$CONFIG_DIR/${project_name}.zsh"
+    if [[ ! -f "$config_file" ]]; then
+        config_file="$ARCHIVE_DIR/${project_name}.zsh"
+        if [[ ! -f "$config_file" ]]; then
+            print_error "Project '$project_name' not found"
+            return 1
+        fi
+    fi
+    
+    local -a env_pairs
+    local var_name value vault_key
+    
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            var_name="${match[1]}"
+            value="${match[2]}"
+            env_pairs+=("${var_name}=${value}")
+        elif [[ "$line" =~ ^#[[:space:]]*zfleak:secret[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.+)$ ]]; then
+            var_name="${match[1]}"
+            vault_key="${match[2]}"
+            if ! value="$(_vault_get "$vault_key")"; then
+                print_error "Failed to resolve secret '$vault_key' for \$$var_name"
+                return 1
+            fi
+            env_pairs+=("${var_name}=${value}")
+        fi
+    done < "$config_file"
+    
+    env "${env_pairs[@]}" "$@"
+}
+
+# ============================================================================
 # Command: edit
 # ============================================================================
 cmd_edit() {
@@ -580,6 +642,7 @@ cmd_help() {
     echo "  ${GREEN}unlock${NC}                        Clear a reveal lockout (requires OS authentication)"
     echo "  ${GREEN}vault-backend${NC}                 Show the resolved secret vault backend"
     echo "  ${GREEN}migrate${NC} <name> --to-backend <b>  Move a project's plaintext secrets into a vault backend"
+    echo "  ${GREEN}run${NC} <name> -- <command...>    Run a command with the project's env in that process only"
     echo "  ${GREEN}help${NC}                          Show this help message"
     echo "  ${GREEN}version${NC}                       Show version information"
     echo ""
@@ -645,6 +708,9 @@ main() {
             ;;
         migrate)
             cmd_migrate "$@"
+            ;;
+        run)
+            cmd_run "$@"
             ;;
         version|-v|--version)
             echo "zfleak version $VERSION"
