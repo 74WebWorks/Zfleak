@@ -1,287 +1,495 @@
 # zfleak Usage Guide
 
-This document covers setup, day-to-day usage, and the command reference
-for `zfleak`.
+This guide covers installation, project workflows, secret handling, vault
+backends, the command reference, shell helpers, and troubleshooting.
 
-## 1. Setup
+## Contents
 
-### 1.1 Prerequisites
+- [Quick Start](#quick-start)
+- [CLI Syntax](#cli-syntax)
+- [Files and Configuration](#files-and-configuration)
+- [First Project](#first-project)
+- [Secret Handling](#secret-handling)
+- [Vault Backends](#vault-backends)
+- [Command Reference](#command-reference)
+- [Shell Helpers](#shell-helpers)
+- [Troubleshooting](#troubleshooting)
+- [Exit Status](#exit-status)
 
-- Bash or Zsh
-- `git`
-- `bats-core` and `shellcheck` if you want to run the repo checks
+## Quick Start
 
-### 1.2 Install from a clone
+### Prerequisites
+
+- macOS or Linux
+- Bash for the installer
+- Zsh for the `zfleak` CLI, including when called from Bash
+- `git` for clone-based or remote installation
+- `curl` only for remote installation
+- `age` and `age-keygen` when using the file backend
+- An initialized `pass` store when using the pass backend
+
+### Install from a clone
+
+The installer asks for confirmation. This command answers `yes`
+non-interactively:
 
 ```bash
-git clone https://github.com/74WebWorks/Zfleak.git
-cd Zfleak
-./install.sh
+git clone https://github.com/74WebWorks/Zfleak.git "$HOME/.zfleak-src"
+cd "$HOME/.zfleak-src"
+printf 'y\n' | ./install.sh
 ```
 
-Reload your shell after install:
+The installer places the CLI in `$HOME/.local/bin/zfleak`, installs
+the shell libraries under `$HOME/.zfleak.d`, and adds the selected
+library to your shell startup file.
+
+Source the RC file named by the installer:
 
 ```bash
-source ~/.zshrc
-# or
-source ~/.bashrc
+# Zsh
+source "$HOME/.zshrc"
+
+# Bash when the installer selected .bash_profile
+# source "$HOME/.bash_profile"
+
+# Bash otherwise
+# source "$HOME/.bashrc"
 ```
 
-### 1.3 Remote install
+Verify the installation:
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/74WebWorks/Zfleak/main/install.sh)
-```
-
-### 1.4 Verify the install
-
-```bash
-zfleak help
+zfleak --help
 zfleak version
 ```
 
-## 2. Files and directories
+### Remote installation
 
-By default, zfleak stores its config under `~/.zfleak.d`.
+Use process substitution so the installer's confirmation prompt remains
+connected to the terminal:
 
-Important paths:
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/74WebWorks/Zfleak/main/install.sh)
+```
 
-- `~/.zfleak.d/<project>.zsh` project configs
-- `~/.zfleak.d/projects.conf` auto-detection mappings
-- `~/.zfleak.d/.archive/` archived project configs
-- `~/.zfleak.d/vault/` encrypted-file backend storage
-- `~/.zfleak.d/.audit.log` reveal failure audit log
+Do not use `curl ... | bash` with the current interactive installer.
 
-You can override the config directory with:
+## CLI Syntax
+
+The general form is:
+
+```text
+zfleak [--backend <backend>] <command> [arguments...]
+```
+
+- `<value>` is required.
+- `[value]` is optional.
+- `<command...>` means one or more remaining command arguments.
+- `--` ends `zfleak` parsing and passes the rest to a child
+  command.
+- Project names may contain only letters, numbers, hyphens, and underscores.
+
+The global `--backend` option must appear before the command:
+
+```bash
+zfleak --backend file run demo -- printenv DB_PASSWORD
+```
+
+## Files and Configuration
+
+The default configuration directory is `$HOME/.zfleak.d`. Set
+`ZFLEAK_CONFIG_DIR` before sourcing the shell library if you use a
+different location:
 
 ```bash
 export ZFLEAK_CONFIG_DIR="$HOME/custom-zfleak"
+source "$HOME/.zshrc"
 ```
 
-## 3. First project workflow
+Important paths:
 
-### 3.1 Create a project
+- `$HOME/.local/bin/zfleak`: installed CLI
+- `$HOME/.local/lib/vault.sh`: vault library used by the CLI
+- `$HOME/.zfleak.d/<project-name>.zsh`: active project config
+- `$HOME/.zfleak.d/.archive/<project-name>.zsh`: archived config
+- `$HOME/.zfleak.d/projects.conf`: auto-detection mappings
+- `$HOME/.zfleak.d/switcher.bash` and
+  `switcher.zsh`: shell helpers
+- `$HOME/.zfleak.d/vault.sh`: vault library used by shell helpers
+- `$HOME/.zfleak.d/vault/identity.txt`: file-backend private identity
+- `$HOME/.zfleak.d/vault/*.age`: encrypted file-backend values
+- `$HOME/.zfleak.d/.reveal_passphrase`: reveal passphrase hash
+- `$HOME/.zfleak.d/.lockout` and `.locked`: reveal lockout state
+- `$HOME/.zfleak.d/.audit.log`: failed reveal and lockout events
+
+Treat the configuration directory as private. Do not commit it as a whole:
+it can contain plaintext values, authentication metadata, audit records, and
+the file-backend identity. Back up the file-backend identity securely or its
+encrypted values cannot be recovered.
+
+## First Project
+
+### Create and register a project
 
 ```bash
-zfleak new-project myapp ~/work/myapp
+demo_dir="$HOME/work/zfleak-demo"
+mkdir -p "$demo_dir"
+zfleak new-project demo "$demo_dir"
 ```
 
-This creates `~/.zfleak.d/myapp.zsh` and registers the path for
-auto-detection.
+`new-project` creates the config file and stores the path mapping. It
+does not create or validate the directory.
 
-### 3.2 Add environment values
+### Add values
 
-Edit the project file:
+Open the project config:
 
 ```bash
-zfleak edit myapp
+zfleak edit demo
 ```
 
-Typical values look like:
+Simple values use exported assignments:
 
 ```bash
-export FLASK_ENV=development
+export APP_ENV=development
 export DB_HOST=127.0.0.1
 ```
 
-For production secrets, prefer vault references:
+Project files are sourced as shell code by `use-project`. Only use
+trusted config files. For portable behavior, keep them to simple exported
+assignments and `zfleak` secret references.
+
+### Load the project
+
+Enter the registered directory:
 
 ```bash
-# zfleak:secret DB_PASSWORD=myapp/DB_PASSWORD
+cd "$HOME/work/zfleak-demo"
+```
+
+The shell hook attempts automatic detection. To load it explicitly:
+
+```bash
+use-project demo
+```
+
+Clear values loaded into the current shell:
+
+```bash
+clear-project
+```
+
+## Secret Handling
+
+### Secret references
+
+A reference maps an exported variable name to a vault key:
+
+```bash
+# zfleak:secret DB_PASSWORD=demo/DB_PASSWORD
+```
+
+The left side is the environment variable. The right side is the backend key.
+The reference does not create the backend value; it must already exist.
+
+There is no public `zfleak secret set` command. The supported public
+way to populate a backend is `migrate`, which moves existing active
+`export NAME=value` lines into a selected backend.
+
+### Sensitive projects
+
+Add this exact active line to a production or otherwise sensitive project:
+
+```bash
 export ZFLEAK_SENSITIVE=true
 ```
 
-### 3.3 Load a project into the shell
+`use-project` refuses to load sensitive projects into the current
+shell. Use a child process instead:
 
 ```bash
-use-project myapp
+zfleak run demo -- your-application-command
 ```
 
-### 3.4 Load a project in a child process only
+This keeps project values out of the calling shell, but the child command and
+its descendants can still read the environment.
+
+### Masked output and reveal
+
+By default, `show` masks every value on an exported assignment, not
+only values marked as secret:
 
 ```bash
-zfleak run myapp -- env | grep DB_
+zfleak show demo
 ```
 
-Use `run` for sensitive projects or anytime you do not want secrets to
-persist in the parent shell.
-
-## 4. Secret handling
-
-### 4.1 Masked output
+Reveal is opt-in:
 
 ```bash
-zfleak show myapp
+zfleak show demo --reveal
 ```
 
-This masks exported values by default.
-
-### 4.2 Reveal secret values
-
-```bash
-zfleak show myapp --reveal
-```
-
-Sensitive projects require the configured reveal passphrase before the
-real values are printed.
-
-### 4.3 Set the reveal passphrase
+For sensitive projects, this prompts for the reveal passphrase. The passphrase
+is configured interactively:
 
 ```bash
 zfleak set-passphrase
 ```
 
-### 4.4 Unlock after a reveal lockout
+Three failed reveal attempts trigger a lockout. On macOS, clear it with OS
+authentication:
 
 ```bash
 zfleak unlock
 ```
 
-On macOS this uses OS authentication. On other platforms it reports that
-unlock support is unavailable.
+Unlock support is currently unavailable on non-macOS platforms. A successful
+reveal resets the failed-attempt counter.
 
-## 5. Vault backends
+## Vault Backends
 
-zfleak resolves a backend automatically unless you override it:
+When `ZFLEAK_VAULT_BACKEND` is unset, `zfleak` selects:
 
-- `keychain` on macOS
-- `pass` if installed
-- `file` as the fallback
+1. `keychain` on macOS
+2. `pass` on other Unix-like systems when `pass` is installed
+3. `file` otherwise
 
-Check the active backend:
+Check the selected name:
 
 ```bash
 zfleak vault-backend
 ```
 
-Override per command:
+This checks selection, not whether the backend is ready to store or retrieve a
+value.
+
+### Keychain
+
+The keychain backend uses the current macOS user's Keychain and the built-in
+`security` command. It is not available on non-macOS platforms.
+
+### pass
+
+The pass backend stores values below `zfleak/<vault-key>`. Install
+`pass`, configure its GPG store, and verify it before using the
+backend:
+
+```bash
+pass --version
+pass init <gpg-key-id>
+export ZFLEAK_VAULT_BACKEND=pass
+```
+
+### Encrypted file backend
+
+The file backend requires `age` and `age-keygen`. On first
+write, it creates a local identity under
+`$HOME/.zfleak.d/vault/identity.txt` and stores one encrypted file
+per vault key. Keep the identity private and backed up.
+
+Select a backend for one invocation:
 
 ```bash
 zfleak --backend file vault-backend
-zfleak --backend file run myapp -- printenv DB_PASSWORD
+zfleak --backend file run demo -- your-application-command
 ```
 
-Environment variable override:
+Environment overrides:
+
+- `ZFLEAK_VAULT_BACKEND`: `keychain`, `pass`, or
+  `file`
+- `ZFLEAK_VAULT_FILE_DIR`: alternate encrypted-file directory
+- `ZFLEAK_KEYCHAIN`: alternate macOS Keychain target
+
+### Migrate plaintext values
+
+Migrate an active project's exported assignments:
 
 ```bash
-export ZFLEAK_VAULT_BACKEND=file
+zfleak migrate demo --to-backend file
 ```
 
-### 5.1 Secret reference format
+The command rewrites every active single-line
+`export NAME=value` assignment into a secret reference. It does not
+select only obviously sensitive names, does not evaluate shell expansion, and
+does not provide a dry run or backup. Review the result and ensure the target
+backend is ready before running it.
 
-Use this line in a project config:
+With the current implementation, add `ZFLEAK_SENSITIVE=true` after
+migration. Otherwise migration converts that marker into a secret reference
+and direct shell loading will not be blocked.
 
-```bash
-# zfleak:secret DB_PASSWORD=myapp/DB_PASSWORD
+## Command Reference
+
+### Global options
+
+```text
+zfleak [--backend <backend>] <command> [arguments...]
 ```
 
-The left side is the exported variable name. The right side is the vault
-key.
+`--backend <backend>` selects `keychain`, `pass`,
+or `file` for that invocation. It must appear before the command.
+The default is automatic backend selection.
 
-### 5.2 Migrate plaintext secrets
+### `zfleak new-project <project-name> [path]`
+
+Create a new active project config. `<project-name>` is required and
+must match `^[A-Za-z0-9_-]+$`. If `[path]` is supplied, it
+is stored for auto-detection. The directory is not created.
 
 ```bash
-zfleak migrate myapp --to-backend file
+zfleak new-project api "$HOME/work/api"
 ```
 
-This rewrites matching `export VAR=value` lines into secret references
-and stores the values in the target backend.
+### `zfleak register-path <project-name> <path>`
 
-## 6. Command reference
-
-### `zfleak new-project <name> [path]`
-
-Create a new project config.
-
-Example:
+Register or replace the auto-detection path for an existing project. The
+project config must already exist; the path itself is not validated.
 
 ```bash
-zfleak new-project api ~/work/api
-```
-
-### `zfleak register-path <name> <path>`
-
-Register or update the auto-detection path for an existing project.
-
-Example:
-
-```bash
-zfleak register-path api ~/work/api
+zfleak register-path api "$HOME/work/api"
 ```
 
 ### `zfleak list`
 
-List active and archived projects.
+List active and archived projects. This command takes no documented options.
 
-### `zfleak edit <name>`
+### `zfleak edit <project-name>`
 
-Open the project config in `$EDITOR`.
+Open an active or archived config using `$EDITOR`, then `vim`
+or `nano` as a fallback. It fails if no project or usable editor is
+available.
 
-### `zfleak show <name> [--reveal]`
+### `zfleak show <project-name> [--reveal]`
 
-Show the project config, masked by default.
+Display an active or archived config. Without `--reveal`, exported
+values are masked. The flag must appear after the project name. Sensitive
+projects require the reveal passphrase; non-sensitive projects do not.
 
-### `zfleak archive <name>`
+### `zfleak archive <project-name>`
 
-Move a project config into `.archive`.
+Move an active config into `.archive` and remove its auto-detection
+mapping. It does not ask for confirmation.
 
-### `zfleak restore <name>`
+### `zfleak restore <project-name>`
 
-Move an archived project back into the active config directory.
+Move an archived config back to the active directory. It does not restore the
+old auto-detection mapping; run `register-path` again if needed.
 
 ### `zfleak set-passphrase`
 
-Set the reveal passphrase used by `show --reveal` on sensitive projects.
+Interactively create or replace the reveal passphrase. It takes no arguments
+and stores only a hash in the config directory.
 
 ### `zfleak unlock`
 
-Clear a reveal lockout after failed passphrase attempts.
+Clear a reveal lockout. If no lockout exists, it reports that nothing is
+locked. Clearing an existing lockout requires OS authentication on macOS.
 
 ### `zfleak vault-backend`
 
-Print the resolved backend name.
+Print the resolved backend name. It does not test backend credentials,
+initialization, or secret keys.
 
-### `zfleak migrate <name> --to-backend <backend>`
+### `zfleak migrate <project-name> --to-backend <backend>`
 
-Move plaintext `export` values into the selected backend.
+Move every matching active `export NAME=value` line into the selected
+backend and replace it with a reference. `<backend>` is required.
+Supported values are `keychain`, `pass`, and `file`.
 
-### `zfleak run <name> -- <command...>`
+### `zfleak run <project-name> -- <command...>`
 
-Run a child command with the project's environment only.
-
-Example:
+Run a child command with project assignments and resolved secret references.
+The `--` separator and a command are required.
 
 ```bash
 zfleak run api -- python -c 'import os; print(os.environ["DB_HOST"])'
 ```
 
-### `zfleak help`
+The child inherits the caller's existing environment and overlays the project
+values. The config is parsed rather than sourced, so shell functions,
+command substitutions, and variable expansion are not applied. The child's
+exit status is returned by `zfleak`.
 
-Show the built-in command help.
+### `zfleak help` and `zfleak version`
 
-### `zfleak version`
+`help`, `-h`, and `--help` show the top-level help.
+`version`, `-v`, and `--version` show the version.
+The command aliases are:
 
-Show the current version string.
+- `new` for `new-project`
+- `register` for `register-path`
+- `ls` for `list`
+- `cat` for `show`
 
-## 7. Shell helpers
+## Shell Helpers
 
-These functions come from the switcher libraries that the installer adds
-to your shell startup file:
+The installer adds these functions to the selected shell:
 
-- `use-project <name>` load a project into the current shell
-- `list-projects` show available projects
-- `current-project` show the active project
-- `clear-project` unload the current project
+- `use-project <project-name>`: source a project into the current
+  shell
+- `list-projects`: list projects from the current shell
+- `current-project`: show the loaded project
+- `clear-project`: unset variables tracked from the loaded project
 
-Auto-detection uses your current directory and the mappings in
-`projects.conf`.
+`use-project` executes the project file in the current shell and is
+blocked for projects with the active sensitive marker. Auto-detection matches
+an exact registered directory or one of its subdirectories.
 
-## 8. Recommended production workflow
+## Troubleshooting
 
-1. Create the project with `zfleak new-project`.
-2. Mark it sensitive with `export ZFLEAK_SENSITIVE=true`.
-3. Store secrets in a backend using `# zfleak:secret ...`.
-4. Use `zfleak run <project> -- <command...>` instead of `use-project`.
-5. Use `zfleak show <project> --reveal` only when you actually need to
-   inspect the config.
+### `zfleak: command not found`
 
+Source the RC file selected by the installer, or invoke the binary directly:
+
+```bash
+"$HOME/.local/bin/zfleak" --help
+```
+
+### Auto-detection does not activate
+
+Confirm that the directory exists, the path is registered, and the shell
+switcher was sourced after installation. Use `zfleak register-path`
+to replace the mapping, then leave and re-enter the directory. Use
+`use-project` to test loading without the hook.
+
+### Sensitive project loading is blocked
+
+This is expected for an active `ZFLEAK_SENSITIVE=true` marker. Run
+the application through `zfleak run` instead.
+
+### Reveal fails
+
+- Run `zfleak set-passphrase` if no passphrase has been configured.
+- Check the passphrase and remember that three failures lock reveal.
+- On macOS, run `zfleak unlock` and provide the OS login password.
+- Review `$HOME/.zfleak.d/.audit.log` for failed attempts.
+
+### Secret resolution fails
+
+Run `zfleak vault-backend`, verify the backend prerequisites, and
+confirm that the referenced key exists. For the file backend, verify that the
+identity and encrypted files are present under the configured vault directory.
+
+### `run` rejects the command
+
+Use the required separator and provide a command:
+
+```bash
+zfleak run <project-name> -- <command...>
+```
+
+### The editor cannot be started
+
+Set `$EDITOR` to an installed editor, or install `vim` or
+`nano`.
+
+## Exit Status
+
+- `0`: command completed successfully
+- `1`: validation, project, backend, authentication, or reveal error
+- `run`: returns the child command's exit status, which can be any
+  value chosen by that command
+
+Because a child command can also return `1`, inspect the command
+output when distinguishing a child failure from a `zfleak` error.
