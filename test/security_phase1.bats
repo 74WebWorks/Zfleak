@@ -102,3 +102,53 @@ teardown() { zfleak_test_teardown; }
     [ "$(zfleak_perms "$fake_home/.zfleak.d/projects.conf")" = "600" ]
     rm -rf "$fake_home"
 }
+
+# ----------------------------------------------------------------------------
+# Task 4: auto-detect prefix-match boundary bug
+# (a sibling dir sharing a path prefix must not trigger the wrong project)
+# ----------------------------------------------------------------------------
+
+@test "(bash) auto-detect does not match a sibling dir sharing a path prefix" {
+    mkdir -p "$ZFLEAK_CONFIG_DIR/work/app" "$ZFLEAK_CONFIG_DIR/work/app-fork"
+    cat > "$ZFLEAK_CONFIG_DIR/app.zsh" <<'EOF'
+export APP_VAR=hello
+EOF
+    echo "app:$ZFLEAK_CONFIG_DIR/work/app" > "$ZFLEAK_CONFIG_DIR/projects.conf"
+    run bash -c "
+        source '$ZFLEAK_REPO_ROOT/lib/switcher.bash'
+        cd '$ZFLEAK_CONFIG_DIR/work/app-fork'
+        _auto_detect_project
+        echo \"ACTIVE=[\$ACTIVE_PROJECT]\"
+    "
+    [[ "$output" == *"ACTIVE=[]"* ]]
+}
+
+@test "(bash) auto-detect still matches an exact registered path" {
+    mkdir -p "$ZFLEAK_CONFIG_DIR/work/app"
+    cat > "$ZFLEAK_CONFIG_DIR/app.zsh" <<'EOF'
+export APP_VAR=hello
+EOF
+    echo "app:$ZFLEAK_CONFIG_DIR/work/app" > "$ZFLEAK_CONFIG_DIR/projects.conf"
+    run bash -c "
+        source '$ZFLEAK_REPO_ROOT/lib/switcher.bash'
+        cd '$ZFLEAK_CONFIG_DIR/work/app'
+        _auto_detect_project
+        echo \"ACTIVE=[\$ACTIVE_PROJECT]\"
+    "
+    [[ "$output" == *"ACTIVE=[app]"* ]]
+}
+
+@test "(zsh) auto-detect does not match a sibling dir sharing a path prefix" {
+    mkdir -p "$ZFLEAK_CONFIG_DIR/work/app" "$ZFLEAK_CONFIG_DIR/work/app-fork"
+    cat > "$ZFLEAK_CONFIG_DIR/app.zsh" <<'EOF'
+export APP_VAR=hello
+EOF
+    echo "app:$ZFLEAK_CONFIG_DIR/work/app" > "$ZFLEAK_CONFIG_DIR/projects.conf"
+    run zsh -c "
+        source '$ZFLEAK_REPO_ROOT/lib/switcher.zsh'
+        cd '$ZFLEAK_CONFIG_DIR/work/app-fork'
+        _auto_detect_project
+        echo \"ACTIVE=[\$ACTIVE_PROJECT]\"
+    "
+    [[ "$output" == *"ACTIVE=[]"* ]]
+}

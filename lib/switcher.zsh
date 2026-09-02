@@ -167,8 +167,10 @@ _auto_detect_project() {
             # Expand ~ to home directory
             project_path="${project_path/#\~/$HOME}"
             
-            # Check if current directory matches project path
-            if [[ "$current_dir" == "$project_path"* ]]; then
+            # Check if current directory matches project path (exact
+            # match, or a real subdirectory of it — not just a string
+            # prefix, so "work/app-fork" doesn't match "work/app")
+            if [[ "$current_dir" == "$project_path" || "$current_dir" == "$project_path"/* ]]; then
                 detected_project="$project_name"
                 break
             fi
