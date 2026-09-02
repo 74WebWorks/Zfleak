@@ -21,6 +21,24 @@ ARCHIVE_DIR="$CONFIG_DIR/.archive"
 PROJECTS_CONFIG="$CONFIG_DIR/projects.conf"
 
 # ============================================================================
+# Internal: gate loading of projects marked ZFLEAK_SENSITIVE=true
+# ============================================================================
+_zfleak_confirm_load() {
+    local file=$1
+    grep -q '^export ZFLEAK_SENSITIVE=true' "$file" 2>/dev/null || return 0
+    [[ "$ZFLEAK_ASSUME_YES" == "1" ]] && return 0
+
+    echo "⚠️  '$file' is marked SENSITIVE (production credentials)."
+    printf "Type 'yes' to load it: "
+    read -r _zfleak_confirm
+    if [[ "$_zfleak_confirm" != "yes" ]]; then
+        echo "❌ Aborted loading sensitive project"
+        return 1
+    fi
+    return 0
+}
+
+# ============================================================================
 # Manual Project Switcher
 # ============================================================================
 use-project() {
@@ -43,6 +61,7 @@ use-project() {
     
     # Try active configs first
     if [[ -f "$config_file" ]]; then
+        _zfleak_confirm_load "$config_file" || return 1
         echo "🔄 Loading project: $project"
         source "$config_file"
         export ACTIVE_PROJECT="$project"
@@ -51,6 +70,7 @@ use-project() {
         return 0
     # Try archived configs
     elif [[ -f "$archive_file" ]]; then
+        _zfleak_confirm_load "$archive_file" || return 1
         echo "🔄 Loading archived project: $project"
         source "$archive_file"
         export ACTIVE_PROJECT="$project (archived)"
