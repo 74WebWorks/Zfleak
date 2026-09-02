@@ -266,19 +266,32 @@ value.
 ### Keychain
 
 The keychain backend uses the current macOS user's Keychain and the built-in
-`security` command. It is not available on non-macOS platforms.
+`security` command. It is the default on macOS and needs no separate setup.
+Verify the command before troubleshooting zfleak:
+
+```bash
+command -v security
+zfleak --backend keychain vault-backend
+```
+
+It is not available on non-macOS platforms.
 
 ### pass
 
-The pass backend stores values below `zfleak/<vault-key>`. Install
-`pass`, configure its GPG store, and verify it before using the
-backend:
+The pass backend stores values below `zfleak/<vault-key>`. Install `pass` and
+GnuPG with your OS package manager. If you do not already have a GPG key,
+create one with `gpg --full-generate-key`, then initialize the password store
+with that key:
 
 ```bash
-pass --version
+gpg --list-secret-keys --keyid-format=long
 pass init <gpg-key-id>
 export ZFLEAK_VAULT_BACKEND=pass
+pass --version
 ```
+
+The selected key must be available to GPG whenever zfleak reads or writes a
+secret.
 
 ### Encrypted file backend
 
@@ -286,6 +299,14 @@ The file backend requires `age` and `age-keygen`. On first
 write, it creates a local identity under
 `$HOME/.zfleak.d/vault/identity.txt` and stores one encrypted file
 per vault key. Keep the identity private and backed up.
+
+Verify the prerequisites before selecting it:
+
+```bash
+command -v age
+command -v age-keygen
+zfleak --backend file vault-backend
+```
 
 Select a backend for one invocation:
 
