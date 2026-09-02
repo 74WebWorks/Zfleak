@@ -434,6 +434,62 @@ cmd_vault_backend() {
 }
 
 # ============================================================================
+# Command: migrate
+# ============================================================================
+cmd_migrate() {
+    local project_name=$1
+    local to_backend=""
+    [[ "$2" == "--to-backend" ]] && to_backend=$3
+    
+    if [[ -z "$project_name" ]]; then
+        print_error "Project name is required"
+        echo "Usage: zfleak migrate <project-name> --to-backend <name>"
+        return 1
+    fi
+    
+    _validate_project_name "$project_name" || return 1
+    
+    if [[ -z "$to_backend" ]]; then
+        print_error "Target backend is required"
+        echo "Usage: zfleak migrate <project-name> --to-backend <name>"
+        return 1
+    fi
+    
+    local config_file="$CONFIG_DIR/${project_name}.zsh"
+    if [[ ! -f "$config_file" ]]; then
+        print_error "Project '$project_name' not found"
+        return 1
+    fi
+    
+    local tmp_file
+    tmp_file="$(mktemp)"
+    local migrated=0
+    local var_name value vault_key
+    
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            var_name="${match[1]}"
+            value="${match[2]}"
+            vault_key="${project_name}/${var_name}"
+            if ! ZFLEAK_VAULT_BACKEND="$to_backend" _vault_set "$vault_key" "$value"; then
+                print_error "Failed to store $var_name in backend '$to_backend'"
+                rm -f "$tmp_file"
+                return 1
+            fi
+            echo "# zfleak:secret ${var_name}=${vault_key}" >> "$tmp_file"
+            migrated=$((migrated + 1))
+        else
+            echo "$line" >> "$tmp_file"
+        fi
+    done < "$config_file"
+    
+    mv "$tmp_file" "$config_file"
+    chmod 600 "$config_file"
+    
+    print_success "Migrated $migrated secret(s) from '$project_name' to backend '$to_backend'"
+}
+
+# ============================================================================
 # Command: edit
 # ============================================================================
 cmd_edit() {
@@ -523,6 +579,7 @@ cmd_help() {
     echo "  ${GREEN}set-passphrase${NC}                Set the passphrase gating --reveal on sensitive projects"
     echo "  ${GREEN}unlock${NC}                        Clear a reveal lockout (requires OS authentication)"
     echo "  ${GREEN}vault-backend${NC}                 Show the resolved secret vault backend"
+    echo "  ${GREEN}migrate${NC} <name> --to-backend <b>  Move a project's plaintext secrets into a vault backend"
     echo "  ${GREEN}help${NC}                          Show this help message"
     echo "  ${GREEN}version${NC}                       Show version information"
     echo ""
@@ -585,6 +642,9 @@ main() {
             ;;
         vault-backend)
             cmd_vault_backend "$@"
+            ;;
+        migrate)
+            cmd_migrate "$@"
             ;;
         version|-v|--version)
             echo "zfleak version $VERSION"
