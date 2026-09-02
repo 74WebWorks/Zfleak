@@ -15,11 +15,23 @@ teardown() {
     "
     [ "$status" -eq 0 ]
     [ -x "$ZFLEAK_FAKE_HOME/.local/bin/zfleak" ]
+    [ -f "$ZFLEAK_FAKE_HOME/.local/lib/vault.sh" ]
     [ -f "$ZFLEAK_FAKE_HOME/.zfleak.d/switcher.bash" ]
     [ -f "$ZFLEAK_FAKE_HOME/.zfleak.d/switcher.zsh" ]
+    [ -f "$ZFLEAK_FAKE_HOME/.zfleak.d/vault.sh" ]
     [ -f "$ZFLEAK_FAKE_HOME/.zfleak.d/projects.conf" ]
     [ -f "$ZFLEAK_FAKE_HOME/.zfleak.d/common.zsh" ]
     grep -q "zfleak" "$ZFLEAK_FAKE_HOME/.bashrc"
+
+    run env HOME="$ZFLEAK_FAKE_HOME" ZDOTDIR="$ZFLEAK_FAKE_HOME" \
+        ZFLEAK_CONFIG_DIR="$ZFLEAK_FAKE_HOME/.zfleak.d" \
+        "$ZFLEAK_FAKE_HOME/.local/bin/zfleak" help
+    [ "$status" -eq 0 ]
+
+    run env HOME="$ZFLEAK_FAKE_HOME" \
+        ZFLEAK_CONFIG_DIR="$ZFLEAK_FAKE_HOME/.zfleak.d" \
+        bash -c "source '$ZFLEAK_FAKE_HOME/.zfleak.d/switcher.bash'; list-projects"
+    [ "$status" -eq 0 ]
 }
 
 @test "install.sh declining the prompt does not install anything" {
