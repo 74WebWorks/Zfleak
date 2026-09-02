@@ -79,3 +79,26 @@ teardown() { zfleak_test_teardown; }
     "$ZFLEAK_BIN" archive demo >/dev/null
     [ "$(zfleak_perms "$ZFLEAK_CONFIG_DIR/.archive")" = "700" ]
 }
+
+# ----------------------------------------------------------------------------
+# Task 3: file permissions (config file, projects.conf, common.zsh owner-only)
+# ----------------------------------------------------------------------------
+
+@test "new-project creates the config file as 600" {
+    "$ZFLEAK_BIN" new-project demo >/dev/null
+    [ "$(zfleak_perms "$ZFLEAK_CONFIG_DIR/demo.zsh")" = "600" ]
+}
+
+@test "new-project with a path creates projects.conf as 600" {
+    "$ZFLEAK_BIN" new-project demo "$HOME/projects/demo" >/dev/null
+    [ "$(zfleak_perms "$ZFLEAK_CONFIG_DIR/projects.conf")" = "600" ]
+}
+
+@test "install.sh creates common.zsh and projects.conf as 600" {
+    local fake_home
+    fake_home="$(mktemp -d)"
+    HOME="$fake_home" SHELL=/bin/bash bash -c "echo y | bash '$ZFLEAK_REPO_ROOT/install.sh'" >/dev/null
+    [ "$(zfleak_perms "$fake_home/.zfleak.d/common.zsh")" = "600" ]
+    [ "$(zfleak_perms "$fake_home/.zfleak.d/projects.conf")" = "600" ]
+    rm -rf "$fake_home"
+}

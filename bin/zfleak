@@ -110,6 +110,9 @@ cmd_new_project() {
 # Add your project-specific environment variables below:
 EOF
     
+    # Config files may hold plaintext secrets; restrict to owner-only access
+    chmod 600 "$config_file"
+    
     # Register project path if provided
     if [[ -n "$project_path" ]]; then
         register_project_path "$project_name" "$project_path"
@@ -139,6 +142,7 @@ register_project_path() {
     
     # Create projects.conf if it doesn't exist
     touch "$PROJECTS_CONFIG"
+    chmod 600 "$PROJECTS_CONFIG"
     
     # Remove existing entry for this project
     sed -i.bak "/^${project_name}:/d" "$PROJECTS_CONFIG" 2>/dev/null || true
