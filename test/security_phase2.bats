@@ -27,20 +27,23 @@ teardown() { zfleak_test_teardown; }
     [[ "$output" == *"ACTIVE=[demo]"* ]]
 }
 
-@test "(bash) use-project on a sensitive project loads after typing yes" {
+@test "(bash) use-project refuses to load a sensitive project entirely" {
     run bash -c "
         source '$ZFLEAK_REPO_ROOT/lib/switcher.bash'
-        use-project prod <<< 'yes'
+        use-project prod
+        st=\$?
         echo \"ACTIVE=[\$ACTIVE_PROJECT]\"
+        exit \$st
     "
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"ACTIVE=[prod]"* ]]
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"ACTIVE=[]"* ]]
+    [[ "$output" == *"zfleak run"* ]]
 }
 
-@test "(bash) use-project on a sensitive project aborts on anything but yes" {
+@test "(bash) ZFLEAK_ASSUME_YES=1 does not bypass the sensitive-project block" {
     run bash -c "
         source '$ZFLEAK_REPO_ROOT/lib/switcher.bash'
-        use-project prod <<< 'no'
+        ZFLEAK_ASSUME_YES=1 use-project prod
         st=\$?
         echo \"ACTIVE=[\$ACTIVE_PROJECT]\"
         exit \$st
@@ -49,36 +52,17 @@ teardown() { zfleak_test_teardown; }
     [[ "$output" == *"ACTIVE=[]"* ]]
 }
 
-@test "(bash) ZFLEAK_ASSUME_YES=1 skips the sensitive-project prompt" {
-    run bash -c "
-        source '$ZFLEAK_REPO_ROOT/lib/switcher.bash'
-        ZFLEAK_ASSUME_YES=1 use-project prod </dev/null
-        echo \"ACTIVE=[\$ACTIVE_PROJECT]\"
-    "
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"ACTIVE=[prod]"* ]]
-}
-
-@test "(zsh) use-project on a sensitive project loads after typing yes" {
+@test "(zsh) use-project refuses to load a sensitive project entirely" {
     run zsh -c "
         source '$ZFLEAK_REPO_ROOT/lib/switcher.zsh'
-        use-project prod <<< 'yes'
-        echo \"ACTIVE=[\$ACTIVE_PROJECT]\"
-    "
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"ACTIVE=[prod]"* ]]
-}
-
-@test "(zsh) use-project on a sensitive project aborts on anything but yes" {
-    run zsh -c "
-        source '$ZFLEAK_REPO_ROOT/lib/switcher.zsh'
-        use-project prod <<< 'no'
+        use-project prod
         st=\$?
         echo \"ACTIVE=[\$ACTIVE_PROJECT]\"
         exit \$st
     "
     [ "$status" -ne 0 ]
     [[ "$output" == *"ACTIVE=[]"* ]]
+    [[ "$output" == *"zfleak run"* ]]
 }
 
 # ----------------------------------------------------------------------------
