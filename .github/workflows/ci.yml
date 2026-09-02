@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats-core, shellcheck, and zsh (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y bats shellcheck zsh
+
+      - name: Install bats-core and shellcheck (macOS)
+        if: runner.os == 'macOS'
+        run: brew install bats-core shellcheck
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test

@@ -11,6 +11,7 @@ This project follows a simple code of conduct: Be respectful, be constructive, a
 ### Reporting Bugs
 
 If you find a bug, please create an issue on GitHub with:
+
 - A clear, descriptive title
 - Steps to reproduce the issue
 - Expected behavior vs actual behavior
@@ -20,6 +21,7 @@ If you find a bug, please create an issue on GitHub with:
 ### Suggesting Features
 
 Feature suggestions are welcome! Please:
+
 - Check if the feature has already been requested
 - Clearly describe the feature and its use case
 - Explain how it would benefit users
@@ -58,7 +60,25 @@ zfleak help
 
 ### Testing
 
-Before submitting a PR:
+zfleak uses [bats-core](https://github.com/bats-core/bats-core) for tests
+and [shellcheck](https://www.shellcheck.net/) for linting.
+
+```bash
+# Install the test tooling (macOS/Homebrew)
+brew install bats-core shellcheck
+
+# Run everything
+make test
+make lint
+```
+
+Tests live in `test/*.bats` and never touch your real `~/.zfleak.d` or
+shell rc files — each test sets `ZFLEAK_CONFIG_DIR`/`HOME` to a throwaway
+`mktemp -d`. Before submitting a PR:
+
+- Add or update a test for any behavior change (see AGENTS.md: a failing
+  test first, then the fix/feature).
+- `make lint && make test` must pass.
 - Test all commands work correctly
 - Test auto-detection functionality
 - Test with multiple projects
@@ -67,7 +87,7 @@ Before submitting a PR:
 
 ## Project Structure
 
-```
+```bash
 zfleak/
 ├── bin/
 │   └── zfleak           # Main CLI tool
