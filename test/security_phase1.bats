@@ -162,7 +162,7 @@ EOF
     printf 'export DB_PASSWORD=super-secret\n' >> "$ZFLEAK_CONFIG_DIR/demo.zsh"
     run "$ZFLEAK_BIN" show demo
     [ "$status" -eq 0 ]
-    [[ "$output" != *"super-secret"* ]]
+    [[ "$output" != *"super-secret"* ]] || false
     [[ "$output" == *"DB_PASSWORD=********"* ]]
 }
 

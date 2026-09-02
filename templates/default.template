@@ -1,6 +1,12 @@
 # Project template configuration
 # Created: {date}
 
+# For production projects, prefer secret references instead of raw
+# plaintext values. Keep local-dev values here only when you really want
+# them in the project file:
+#   export ZFLEAK_SENSITIVE=true
+#   # zfleak:secret DB_PASSWORD={project_name}/DB_PASSWORD
+
 # Application Configuration
 # export APP_NAME={project_name}
 # export APP_ENV=development
@@ -19,6 +25,7 @@
 # export DB_PORT=5432
 # export DB_USER={project_name}
 # export DB_PASSWORD=your_password_here
+# zfleak:secret DB_PASSWORD={project_name}/DB_PASSWORD
 # export DB_NAME={project_name}_dev
 # export DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME
 

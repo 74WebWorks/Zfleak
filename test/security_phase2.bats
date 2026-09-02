@@ -36,7 +36,7 @@ teardown() { zfleak_test_teardown; }
         exit \$st
     "
     [ "$status" -ne 0 ]
-    [[ "$output" == *"ACTIVE=[]"* ]]
+    [[ "$output" == *"ACTIVE=[]"* ]] || false
     [[ "$output" == *"zfleak run"* ]]
 }
 
@@ -61,7 +61,7 @@ teardown() { zfleak_test_teardown; }
         exit \$st
     "
     [ "$status" -ne 0 ]
-    [[ "$output" == *"ACTIVE=[]"* ]]
+    [[ "$output" == *"ACTIVE=[]"* ]] || false
     [[ "$output" == *"zfleak run"* ]]
 }
 
@@ -84,7 +84,7 @@ teardown() { zfleak_test_teardown; }
 @test "set-passphrase requires the confirmation to match" {
     run bash -c "printf 'hunter2\\nwrong\\n' | '$ZFLEAK_BIN' set-passphrase"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"did not match"* ]]
+    [[ "$output" == *"did not match"* ]] || false
     [ ! -f "$ZFLEAK_CONFIG_DIR/.reveal_passphrase" ]
 }
 
@@ -122,7 +122,7 @@ teardown() { zfleak_test_teardown; }
     # even the correct passphrase is now refused
     run bash -c "printf 'hunter2\\n' | '$ZFLEAK_BIN' show prod --reveal"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"locked"* ]]
+    [[ "$output" == *"locked"* ]] || false
     [[ "$output" != *"super-secret"* ]]
 }
 

@@ -1,374 +1,139 @@
 # zfleak
 
-**Project Environment Manager for Bash & Zsh**
+Project environment manager for Bash and Zsh. Keep project-specific
+environment variables in local configuration files, switch them automatically
+when changing directories, or expose them only to one child process.
 
-A lightweight, powerful CLI tool that manages project-specific environment variables with automatic detection and seamless switching between development environments.
+## Quick Start
 
-## ✨ Features
-
-- 🚀 **Zero Configuration Startup** - Works out of the box
-- 🔍 **Automatic Project Detection** - Auto-loads environments when you `cd` into project directories
-- 🛠️ **Powerful CLI** - Full-featured command-line interface
-- 📦 **Portable** - Install once, use everywhere
-- 🎨 **Template System** - Quick project setup with sensible defaults
-- 🗂️ **Archive Management** - Keep old configs without cluttering active projects
-- 🎯 **Clean & Fast** - Minimal overhead, maximum productivity
-- 🐚 **Shell Compatible** - Works seamlessly with both Bash and Zsh on Linux and macOS
-
-## 🎬 Quick Start
-
-### Installation
-
-#### From GitHub (Recommended)
+The installer requires Bash. The `zfleak` CLI requires Zsh, including
+when it is called from Bash.
 
 ```bash
-# Clone the repository
-git clone https://github.com/74WebWorks/Zfleak.git
-cd Zfleak
-
-# Run the installer (detects Bash or Zsh automatically)
-./install.sh
-
-# Reload your shell
-source ~/.zshrc    # For Zsh
-source ~/.bashrc   # For Bash
+git clone https://github.com/74WebWorks/Zfleak.git "$HOME/.zfleak-src"
+cd "$HOME/.zfleak-src"
+printf 'y\n' | ./install.sh
 ```
 
-#### Remote Installation
+Source the shell RC file named by the installer:
 
 ```bash
-# One-liner for remote installation
-bash <(curl -s https://raw.githubusercontent.com/74WebWorks/Zfleak/main/install.sh)
+# Zsh
+source "$HOME/.zshrc"
 
-# Reload your shell
-source ~/.zshrc
+# Bash when the installer selected .bash_profile
+# source "$HOME/.bash_profile"
+
+# Bash otherwise
+# source "$HOME/.bashrc"
 ```
 
-### Create Your First Project
+Create a directory and project configuration:
 
 ```bash
-# Create a new project with auto-detection
-zfleak new-project myapp ~/projects/myapp
-
-# Navigate to your project
-cd ~/projects/myapp
-# 🔍 Detected project: myapp
-# ✅ Loaded active project: myapp
-
-# Your environment variables are now active!
-```
-
-## 📖 Documentation
-
-### Table of Contents
-
-- [Installation](#installation-1)
-- [Basic Usage](#basic-usage)
-- [Commands](#commands)
-- [Configuration](#configuration)
-- [Examples](#examples)
-- [Advanced Features](#advanced-features)
-
-### Installation
-
-#### Quick Install
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/74WebWorks/Zfleak/main/install.sh | bash
-```
-
-#### Manual Install
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/74WebWorks/Zfleak.git ~/.zfleak-install
-   ```
-
-2. Run the installer:
-   ```bash
-   cd ~/.zfleak-install
-   ./install.sh
-   ```
-   
-   The installer automatically detects your shell (Bash or Zsh) and configures the appropriate files.
-
-3. Reload your shell:
-   ```bash
-   # For Zsh
-   source ~/.zshrc
-   
-   # For Bash
-   source ~/.bashrc  # or ~/.bash_profile on macOS
-   ```
-
-### Basic Usage
-
-#### Creating Projects
-
-```bash
-# Create a new project
-zfleak new-project <name> [path]
-
-# Example
-zfleak new-project backend ~/work/mycompany/backend
-```
-
-This creates a configuration file with a template containing common environment variables.
-
-#### Automatic Loading
-
-Once a project is created and a path is registered, simply navigate to that directory:
-
-```bash
-cd ~/work/mycompany/backend
-# 🔍 Detected project: backend
-# ✅ Loaded active project: backend
-```
-
-#### Manual Switching
-
-```bash
-# Switch to a project
-use-project backend
-
-# View current project
-current-project
-
-# Clear environment
+demo_dir="$HOME/work/zfleak-demo"
+mkdir -p "$demo_dir"
+zfleak new-project demo "$demo_dir"
+printf '\nexport ZFLEAK_DEMO=ready\n' >> "$HOME/.zfleak.d/demo.zsh"
+use-project demo
+printf '%s\n' "$ZFLEAK_DEMO"
 clear-project
 ```
 
-### Commands
-
-#### `zfleak new-project <name> [path]`
-
-Create a new project configuration with optional auto-detection path.
-
-**Examples:**
-```bash
-zfleak new-project webapp ~/projects/webapp
-zfleak new-project api  # No auto-detection
-```
-
-#### `zfleak register-path <name> <path>`
-
-Register or update the auto-detection path for an existing project.
-
-**Example:**
-```bash
-zfleak register-path api ~/projects/api
-```
-
-#### `zfleak list`
-
-List all projects (active and archived).
-
-**Example output:**
-```
-Active Projects:
-
-  • backend → /Users/you/work/backend
-  • frontend → /Users/you/work/frontend
-  • api (no auto-detection path)
-
-Archived Projects:
-
-  • old-project
-```
-
-#### `zfleak edit <name>`
-
-Open a project's configuration in your editor.
-
-**Example:**
-```bash
-zfleak edit backend
-```
-
-#### `zfleak show <name>`
-
-Display a project's configuration.
-
-**Example:**
-```bash
-zfleak show backend
-```
-
-#### `zfleak archive <name>`
-
-Move a project to the archive (keeps config but removes from active list).
-
-**Example:**
-```bash
-zfleak archive old-project
-```
-
-#### `zfleak restore <name>`
-
-Restore an archived project to active status.
-
-**Example:**
-```bash
-zfleak restore old-project
-```
-
-### Configuration
-
-#### Project Configuration Files
-
-Project configs are stored in `~/.zfleak.d/<project-name>.zsh`.
-
-**Example configuration:**
+For remote installation, use a command that leaves the installer's
+confirmation prompt connected to the terminal:
 
 ```bash
-# ~/.zfleak.d/backend.zsh
-export FLASK_APP='backend.app:create_app()'
-export FLASK_ENV=development
-
-export DB_HOST=localhost
-export DB_PORT=5432
-export DB_USER=backend_user
-export DB_PASSWORD=dev_password
-export DB_NAME=backend_dev
-
-export API_KEY=your_api_key_here
-export DEBUG=true
+bash <(curl -fsSL https://raw.githubusercontent.com/74WebWorks/Zfleak/main/install.sh)
 ```
 
-#### Path Registration
+The full setup guide, security model, backend setup, command reference, and
+troubleshooting steps are in [USAGE.md](USAGE.md).
 
-Paths are registered in `~/.zfleak.d/projects.conf`:
+## Features
 
-```
-backend:/Users/you/work/backend
-frontend:/Users/you/work/frontend
-api:/Users/you/work/api
-```
+- Automatic project detection from registered directories
+- Manual shell switching with cleanup between projects
+- Masked configuration display by default
+- Child-process-only execution for sensitive environments
+- macOS Keychain, `pass`, and encrypted-file vault backends
+- Project archiving and restoration
 
-### Examples
+## Security
 
-#### Example 1: Flask Application
+### Threat model
+
+zfleak reduces accidental exposure of project secrets. It does not protect
+against a local user who can read your home directory, a compromised backend,
+or a child process that intentionally reads its environment.
+
+- Keep production values in a vault reference instead of a plaintext config.
+- Mark sensitive projects with `export ZFLEAK_SENSITIVE=true`.
+- Use `zfleak run <project-name> -- <command...>` so values are not exported
+  into the calling shell.
+- `zfleak show <project-name>` masks exported values unless reveal is
+  explicitly requested.
+- Do not commit `~/.zfleak.d`; it can contain plaintext config, audit records,
+  and the file-backend identity.
+
+### Protection by phase
+
+- Phase 0 adds regression tests and linting for the security work.
+- Phase 1 hardens file permissions, project-name validation, path matching,
+  and default output masking.
+- Phase 2 adds sensitive-project gates, reveal authentication, lockout, and
+  audit logging.
+- Phase 3 adds named secret references and a vault backend interface.
+- Phase 4 adds macOS Keychain, `pass`, and encrypted-file backends, plus
+  plaintext migration.
+- Phase 5 keeps sensitive project values in the `run` child process only.
+- Phase 6 documents safe setup and migration practices.
+
+### Backend setup
+
+- **macOS:** `keychain` is selected by default and uses the built-in
+  `security` command. No separate vault setup is required.
+- **Linux:** `pass` is selected when it is installed and initialized. Install
+  `pass` and GnuPG, create or select a GPG key, then run
+  `pass init <gpg-key-id>`.
+- **macOS or Linux:** the `file` backend requires `age` and `age-keygen`.
+  It creates an encrypted per-key store on first write.
+
+Check or override selection with:
 
 ```bash
-# Create project
-zfleak new-project myflask ~/projects/myflask
-
-# Edit configuration
-zfleak edit myflask
-
-# Add these lines:
-# export FLASK_APP='myflask.app:create_app()'
-# export FLASK_ENV=development
-# export DATABASE_URL=postgresql://localhost/myflask
-
-# Use it
-cd ~/projects/myflask
-flask run  # Uses your configured environment!
+zfleak vault-backend
+ZFLEAK_VAULT_BACKEND=file zfleak run demo -- <command...>
 ```
 
-#### Example 2: Multiple Environments
+See [USAGE.md](USAGE.md#vault-backends) for prerequisites, environment
+variables, backend verification, and recovery steps.
+
+### Migrate plaintext values
+
+For an existing project, migrate its active exported assignments into a
+selected backend:
 
 ```bash
-# Create different environments for same project
-zfleak new-project api-dev ~/projects/api
-zfleak new-project api-staging
-zfleak new-project api-prod
-
-# Configure each differently
-zfleak edit api-dev       # Add dev database
-zfleak edit api-staging   # Add staging database
-zfleak edit api-prod      # Add prod database
-
-# Switch between them
-use-project api-dev
-use-project api-staging
-use-project api-prod
+zfleak migrate <project-name> --to-backend <backend>
 ```
 
-#### Example 3: Team Configuration
+The command replaces every matching `export NAME=value` line, except the
+`ZFLEAK_SENSITIVE` marker, with a `# zfleak:secret` reference. It has no dry
+run or backup, so review the config and verify the backend before and after
+running it. See [the migration guide](USAGE.md#migrate-plaintext-values).
 
-```bash
-# Share your zfleak config with your team
-cd ~/.zfleak.d
-git init
-git add .
-git commit -m "Team zfleak configuration"
-git remote add origin https://github.com/yourteam/zfleak-config.git
-git push -u origin main
+## Documentation
 
-# Team members install:
-git clone https://github.com/yourteam/zfleak-config.git ~/.zfleak.d
-source ~/.zshrc
-```
+- [Usage guide](USAGE.md)
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
 
-### Advanced Features
+## Support
 
-#### Custom Configuration Directory
+- [Report a bug](https://github.com/74WebWorks/Zfleak/issues)
+- [Ask a question](https://github.com/74WebWorks/Zfleak/discussions)
 
-Set a custom location for zfleak configs:
+## License
 
-```bash
-export ZFLEAK_CONFIG_DIR="$HOME/my-custom-location"
-```
-
-#### Integration with Other Tools
-
-```bash
-# Use with Docker
-docker run -e "$(env | grep DB_)" myimage
-
-# Use with Make
-make deploy DB_HOST=$DB_HOST DB_NAME=$DB_NAME
-
-# Export to .env file
-env | grep "^DB_\|^API_" > .env
-```
-
-#### Variable Tracking
-
-zfleak tracks which variables it loads and automatically unsets them when switching projects:
-
-```bash
-use-project project-a  # Sets project-a variables
-use-project project-b  # Unsets project-a vars, sets project-b vars
-clear-project          # Unsets all project vars
-```
-
-## 🔧 Configuration
-
-### Global Settings
-
-Create `~/.zfleak.d/common.zsh` for settings shared across all projects:
-
-```bash
-# Common settings for all projects
-export EDITOR=code
-export DEFAULT_REGION=us-east-1
-```
-
-### Machine-Specific Settings
-
-Create `~/.zfleak.local` for settings that shouldn't be in version control:
-
-```bash
-# Machine-specific secrets
-export SECRET_API_KEY=abc123
-export LOCAL_DEV_PATH=/custom/path
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 🙏 Acknowledgments
-
-Built with ❤️ for developers who work across multiple projects.
-
-## 📮 Support
-
-- Report bugs: [GitHub Issues](https://github.com/74WebWorks/Zfleak/issues)
-- Ask questions: [GitHub Discussions](https://github.com/74WebWorks/Zfleak/discussions)
+MIT. See [LICENSE](LICENSE).

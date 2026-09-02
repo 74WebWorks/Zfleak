@@ -17,6 +17,13 @@ teardown() { zfleak_test_teardown; }
     [[ "$output" == *"--to-backend"* ]]
 }
 
+@test "migrate rejects an unsupported backend" {
+    "$ZFLEAK_BIN" new-project demo >/dev/null
+    run "$ZFLEAK_BIN" migrate demo --to-backend invalid
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"keychain"* ]]
+}
+
 @test "migrate errors for an unknown project" {
     run env ZFLEAK_VAULT_FILE_DIR="$ZFLEAK_VAULT_FILE_DIR" "$ZFLEAK_BIN" migrate ghost --to-backend file
     [ "$status" -eq 1 ]
@@ -37,7 +44,7 @@ teardown() { zfleak_test_teardown; }
     [ "$status" -eq 0 ]
 
     run cat "$ZFLEAK_CONFIG_DIR/demo.zsh"
-    [[ "$output" == *"# zfleak:secret DB_PASSWORD=demo/DB_PASSWORD"* ]]
+    [[ "$output" == *"# zfleak:secret DB_PASSWORD=demo/DB_PASSWORD"* ]] || false
     [[ "$output" != *"export DB_PASSWORD=super-secret"* ]]
 
     run env ZFLEAK_VAULT_FILE_DIR="$ZFLEAK_VAULT_FILE_DIR" ZFLEAK_VAULT_BACKEND=file bash -c "
@@ -67,4 +74,16 @@ teardown() { zfleak_test_teardown; }
         echo \"DB=[\$DB_PASSWORD]\"
     "
     [[ "$output" == *"DB=[super-secret]"* ]]
+}
+
+@test "migrate preserves the sensitive-project marker" {
+    "$ZFLEAK_BIN" new-project demo >/dev/null
+    printf 'export ZFLEAK_SENSITIVE=true\n' >> "$ZFLEAK_CONFIG_DIR/demo.zsh"
+
+    run env ZFLEAK_VAULT_FILE_DIR="$ZFLEAK_VAULT_FILE_DIR" \
+        "$ZFLEAK_BIN" migrate demo --to-backend file
+    [ "$status" -eq 0 ]
+
+    run grep -q '^export ZFLEAK_SENSITIVE=true$' "$ZFLEAK_CONFIG_DIR/demo.zsh"
+    [ "$status" -eq 0 ]
 }

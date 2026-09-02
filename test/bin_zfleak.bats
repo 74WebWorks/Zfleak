@@ -10,12 +10,28 @@ teardown() { zfleak_test_teardown; }
 }
 
 @test "help prints usage when given no command" {
-    # Known bug: `shift` in main() runs before checking argc, so zsh's
-    # `set -e` aborts with a non-zero exit instead of reaching cmd_help.
-    # Pinning current (broken) behavior here; see TASK.md Phase 1.
     run "$ZFLEAK_BIN"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Usage:"* ]]
+}
+
+@test "help documents the global backend option and aliases" {
+    run "$ZFLEAK_BIN" --help
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"--backend <backend>"* ]] || false
+    [[ "$output" == *"Aliases:"* ]]
+}
+
+@test "--backend requires a value" {
+    run "$ZFLEAK_BIN" --backend
     [ "$status" -eq 1 ]
-    [[ "$output" == *"shift count"* ]]
+    [[ "$output" == *"backend"* ]]
+}
+
+@test "--backend rejects an unsupported backend" {
+    run "$ZFLEAK_BIN" --backend invalid vault-backend
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"keychain"* ]]
 }
 
 @test "unknown command errors and shows help" {

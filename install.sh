@@ -123,6 +123,11 @@ step_install_binary() {
 }
 
 step_install_library() {
+    mkdir -p "$INSTALL_DIR/lib"
+    cp "$SCRIPT_DIR/lib/vault.sh" "$INSTALL_DIR/lib/vault.sh"
+    chmod 600 "$INSTALL_DIR/lib/vault.sh"
+    print_success "Installed vault.sh"
+
     echo -e "${CYAN}Installing library files...${NC}"
     echo ""
     
@@ -134,6 +139,9 @@ step_install_library() {
         cp "$SCRIPT_DIR/lib/switcher.bash" "$CONFIG_DIR/switcher.bash"
         print_success "Installed switcher.bash"
     fi
+
+    cp "$SCRIPT_DIR/lib/vault.sh" "$CONFIG_DIR/vault.sh"
+    chmod 600 "$CONFIG_DIR/vault.sh"
     
     echo ""
 }
