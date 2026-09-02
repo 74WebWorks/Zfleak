@@ -52,3 +52,68 @@ load test_helper
     [ "$status" -eq 0 ]
     [[ "$output" == "got:somekey" ]]
 }
+
+# ----------------------------------------------------------------------------
+# Task 2: --backend flag / ZFLEAK_VAULT_BACKEND with OS auto-detect default
+# ----------------------------------------------------------------------------
+
+@test "_zfleak_default_vault_backend picks keychain on Darwin" {
+    run bash -c "
+        source '$ZFLEAK_REPO_ROOT/lib/vault.sh'
+        uname() { echo Darwin; }
+        _zfleak_default_vault_backend
+    "
+    [ "$output" = "keychain" ]
+}
+
+@test "_zfleak_default_vault_backend picks pass when installed and not on Darwin" {
+    run bash -c "
+        source '$ZFLEAK_REPO_ROOT/lib/vault.sh'
+        uname() { echo Linux; }
+        pass() { :; }
+        _zfleak_default_vault_backend
+    "
+    [ "$output" = "pass" ]
+}
+
+@test "_zfleak_default_vault_backend falls back to file otherwise" {
+    # Sandbox PATH so a real `pass` binary on the dev/CI machine (e.g.
+    # installed via brew) can't leak into this "pass not available" case.
+    local empty_path
+    empty_path="$(mktemp -d)"
+    run bash -c "
+        PATH='$empty_path'
+        source '$ZFLEAK_REPO_ROOT/lib/vault.sh'
+        uname() { echo Linux; }
+        _zfleak_default_vault_backend
+    "
+    rm -rf "$empty_path"
+    [ "$output" = "file" ]
+}
+
+setup() { zfleak_test_setup; }
+teardown() { zfleak_test_teardown; }
+
+@test "vault-backend reports the auto-detected default when unset" {
+    run "$ZFLEAK_BIN" vault-backend
+    [ "$status" -eq 0 ]
+    [[ -n "$output" ]]
+}
+
+@test "ZFLEAK_VAULT_BACKEND overrides the auto-detected default" {
+    run bash -c "ZFLEAK_VAULT_BACKEND=pass '$ZFLEAK_BIN' vault-backend"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"pass"* ]]
+}
+
+@test "--backend overrides the auto-detected default" {
+    run "$ZFLEAK_BIN" --backend pass vault-backend
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"pass"* ]]
+}
+
+@test "--backend still lets the requested subcommand run normally" {
+    run "$ZFLEAK_BIN" --backend pass new-project demo
+    [ "$status" -eq 0 ]
+    [ -f "$ZFLEAK_CONFIG_DIR/demo.zsh" ]
+}
