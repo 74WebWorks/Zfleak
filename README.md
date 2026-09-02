@@ -63,11 +63,79 @@ cd ~/projects/myapp
 ### Table of Contents
 
 - [Installation](#installation-1)
+- [Security](#security)
 - [Basic Usage](#basic-usage)
 - [Commands](#commands)
 - [Configuration](#configuration)
 - [Examples](#examples)
 - [Advanced Features](#advanced-features)
+
+### Security
+
+#### Threat Model
+
+zfleak is designed to keep project secrets out of the wrong places:
+
+- plain config files on disk should not be the default store for production secrets
+- sensitive projects should not be loaded into the parent shell
+- secret values should not be printed unless the user explicitly asks for them
+
+#### What Each Phase Protects
+
+- Phase 1 hardens local file handling and masks `zfleak show` output by default.
+- Phase 2 blocks sensitive projects from `use-project` and gates `show --reveal`.
+- Phase 3 adds secret backends so configs can reference secrets by name.
+- Phase 4 stores secrets in macOS Keychain, `pass`, or encrypted files.
+- Phase 5 adds `zfleak run` so secrets live only in a child process.
+- Phase 6 documents the security model and migration path.
+
+#### Backend Setup
+
+zfleak resolves a vault backend automatically when `ZFLEAK_VAULT_BACKEND` is unset:
+
+- macOS: `keychain`
+- Linux or other Unix-like systems with `pass` installed: `pass`
+- fallback: encrypted file backend
+
+You can check the resolved backend with:
+
+```bash
+zfleak vault-backend
+```
+
+You can also force a backend for a single command:
+
+```bash
+zfleak --backend file run demo -- env | grep DEMO_SECRET
+```
+
+#### Secret References
+
+Use backend references in project configs instead of raw production secrets:
+
+```bash
+# zfleak:secret DB_PASSWORD=demo/DB_PASSWORD
+```
+
+That keeps the config readable while storing the secret value in the selected backend.
+
+#### Migrating From Plaintext
+
+If a project already stores secrets as `export` lines, migrate them into a backend:
+
+```bash
+zfleak migrate demo --to-backend file
+```
+
+The command rewrites secret `export` lines into `# zfleak:secret VAR=<project>/VAR` references and stores the values in the chosen backend.
+
+For production projects, add:
+
+```bash
+export ZFLEAK_SENSITIVE=true
+```
+
+That blocks direct shell loading and keeps the project on the `zfleak run` path.
 
 ### Installation
 
