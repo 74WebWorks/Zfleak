@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
 
 jobs:
@@ -14,9 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install bats-core and shellcheck (Linux)
+      - name: Install bats-core, shellcheck, and zsh (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y bats shellcheck
+        run: sudo apt-get update && sudo apt-get install -y bats shellcheck zsh
 
       - name: Install bats-core and shellcheck (macOS)
         if: runner.os == 'macOS'
