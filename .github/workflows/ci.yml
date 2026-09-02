@@ -12,16 +12,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install bats-core, shellcheck, and zsh (Linux)
+      - name: Install bats-core, shellcheck, zsh, and vault backend tools (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y bats shellcheck zsh
+        run: sudo apt-get update && sudo apt-get install -y bats shellcheck zsh pass gnupg age
 
-      - name: Install bats-core, shellcheck, and a modern bash (macOS)
+      - name: Install bats-core, shellcheck, a modern bash, and vault backend tools (macOS)
         if: runner.os == 'macOS'
         # macOS ships bash 3.2 (no associative arrays), which
         # lib/switcher.bash's cleanup tracking relies on.
         run: |
-          brew install bats-core shellcheck bash
+          brew install bats-core shellcheck bash pass gnupg age
           echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
 
       - name: Lint

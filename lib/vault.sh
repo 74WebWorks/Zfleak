@@ -109,3 +109,61 @@ _vault_delete_pass() {
     pass rm -f "zfleak/$key" >/dev/null 2>&1
 }
 
+# ============================================================================
+# Encrypted file backend (universal fallback)
+# ============================================================================
+# Each vault key is stored as its own age-encrypted file. A local age
+# identity is generated on first use under ZFLEAK_VAULT_FILE_DIR (default
+# ~/.zfleak.d/vault), never a shared/master passphrase.
+
+_zfleak_vault_file_dir() {
+    echo "${ZFLEAK_VAULT_FILE_DIR:-${ZFLEAK_CONFIG_DIR:-$HOME/.zfleak.d}/vault}"
+}
+
+_zfleak_vault_file_identity() {
+    echo "$(_zfleak_vault_file_dir)/identity.txt"
+}
+
+_zfleak_vault_file_path() {
+    local key=$1
+    echo "$(_zfleak_vault_file_dir)/$(echo "$key" | tr '/' '_').age"
+}
+
+_zfleak_vault_file_ensure_identity() {
+    local dir identity
+    dir="$(_zfleak_vault_file_dir)"
+    identity="$(_zfleak_vault_file_identity)"
+    mkdir -p "$dir"
+    chmod 700 "$dir"
+    if [[ ! -f "$identity" ]]; then
+        age-keygen -o "$identity" >/dev/null 2>&1
+        chmod 600 "$identity"
+    fi
+}
+
+_vault_get_file() {
+    local key=$1
+    local identity file
+    identity="$(_zfleak_vault_file_identity)"
+    file="$(_zfleak_vault_file_path "$key")"
+    [[ -f "$identity" && -f "$file" ]] || return 1
+    age -d -i "$identity" "$file" 2>/dev/null
+}
+
+_vault_set_file() {
+    local key=$1
+    local value=$2
+    local identity file pubkey
+    _zfleak_vault_file_ensure_identity
+    identity="$(_zfleak_vault_file_identity)"
+    file="$(_zfleak_vault_file_path "$key")"
+    pubkey="$(age-keygen -y "$identity" 2>/dev/null)" || return 1
+    printf '%s' "$value" | age -r "$pubkey" -o "$file" 2>/dev/null || return 1
+    chmod 600 "$file"
+}
+
+_vault_delete_file() {
+    local key=$1
+    rm -f "$(_zfleak_vault_file_path "$key")"
+}
+
